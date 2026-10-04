@@ -42,4 +42,18 @@ describe('settingsStore', () => {
     expect(droneVolume).toBeLessThanOrEqual(1)
     expect(goalMinutes).toBeGreaterThanOrEqual(1)
   })
+
+  it('reloads the stored settings after an import replaced them', () => {
+    const storage = memoryStorage()
+    const sound = recordingSound()
+    const store = createSettingsStore({ storage, sound })
+    const settings = { ...DEFAULT_SETTINGS, droneVolume: 0.1, goalMinutes: 25 }
+    storage.update((state) => ({ ...state, settings }))
+    store.getState().reload()
+    expect(store.getState().settings).toEqual(settings)
+    expect(sound.calls.at(-1)).toEqual([
+      'setVolumes',
+      { drone: 0.1, note: DEFAULT_SETTINGS.noteVolume },
+    ])
+  })
 })

@@ -10,6 +10,13 @@ produced it.
 
 ---
 
+## 0.3.0 — 2026-10-04
+
+**Settings gets a test sound.** The drone with a few degrees over it plays until
+stopped, so the volumes can be set by ear. Also spelled out: export/import is the
+whole stored state, and an import asks before replacing it; a preset reset clears
+that preset's progress only, leaving the shared stats and daily time (§7.5).
+
 ## 0.2.1 — 2026-10-04
 
 **The tonic lock names its pitch.** The session sheet's tonic lock lists the 12

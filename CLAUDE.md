@@ -16,9 +16,9 @@ Status: spec and scaffold deployed (a placeholder screen); the pure domain core
 (`theory/`, `practice/`, `storage/`) and the session runner (`practice/session.ts`,
 a pure state machine that emits audio and timer effects), the audio interface
 (`audio/sound.ts`: drone and cue playback), the stores that drive the runner
-(`store/`) and the screens — Home, session sheet, Stage with the pad, Report — are
-built on `dev`. Next up is the Settings screen (§7.5), with import/export and
-per-preset reset.
+(`store/`) and every screen in §7 — Home, session sheet, Stage with the pad,
+Report, Settings — are built on `dev`. Next up: a phone check of the whole app,
+then deploying it to `master` when asked.
 
 ## DESIGN.md — the spec
 

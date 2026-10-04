@@ -283,6 +283,17 @@ Melody) or stars earned (Speed); the goal line.
 Drone volume, note volume, register (1 / 2 / 3 octaves), daily goal minutes
 (default 10), JSON export/import, and reset progress per preset.
 
+- A **test sound** sets the volumes by ear: the drone with a few degrees taking
+  turns over it, until it's stopped or Settings closes. The volumes are otherwise
+  silent here, since the drone only plays in a session.
+
+- **Export/import** covers everything stored — stats, progress, daily time and
+  settings — since this device holds the only copy (§2). An import replaces all
+  of it, so it asks first.
+- **Reset** opens a preset fresh: its unlocks, passes and melody window start
+  over. The shared stats (§5) and daily time stay — they belong to every preset,
+  and clearing them would wipe 1 and 5 in the others too. It asks first.
+
 ---
 
 ## 8. Project Structure

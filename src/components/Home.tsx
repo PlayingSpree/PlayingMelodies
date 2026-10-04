@@ -1,7 +1,7 @@
 // Home (DESIGN.md §7.1): the streak and today's minutes against the goal,
 // then one card per preset — unlock progress, its degrees' letter grades,
 // their stars once Speed is open, and the melody grade once Melody is open.
-// Tapping a card opens its session sheet.
+// Tapping a card opens its session sheet; the gear opens Settings.
 
 import { useState } from 'react'
 import {
@@ -17,9 +17,15 @@ import { usePractice, useSettings } from '../store'
 import { degreeLabel, PRESETS, type PresetId } from '../theory'
 import { cx } from './cx'
 import { formatMinutes, gradeLabel, gradeText, STAR_TEXT } from './labels'
-import { Card, SectionLabel } from './ui'
+import { Card, RaisedButton, SectionLabel } from './ui'
 
-export function Home({ onOpen }: { onOpen: (presetId: PresetId) => void }) {
+export function Home({
+  onOpen,
+  onSettings,
+}: {
+  onOpen: (presetId: PresetId) => void
+  onSettings: () => void
+}) {
   const records = usePractice((s) => s.records)
   const goal = useSettings((s) => s.settings.goalMinutes)
 
@@ -31,16 +37,21 @@ export function Home({ onOpen }: { onOpen: (presetId: PresetId) => void }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-3xl font-extrabold tracking-tight">
-          PlayingMelodies
-        </h1>
-        <span className="text-xs font-semibold text-ink-faint">
-          v{__APP_VERSION__}
-          {__APP_BRANCH__ &&
-            __APP_BRANCH__ !== 'master' &&
-            ` · ${__APP_BRANCH__}`}
-        </span>
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex flex-col">
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            PlayingMelodies
+          </h1>
+          <span className="text-xs font-semibold text-ink-faint">
+            v{__APP_VERSION__}
+            {__APP_BRANCH__ &&
+              __APP_BRANCH__ !== 'master' &&
+              ` · ${__APP_BRANCH__}`}
+          </span>
+        </div>
+        <RaisedButton size="sm" aria-label="Settings" onClick={onSettings}>
+          ⚙
+        </RaisedButton>
       </header>
 
       <Card className="flex flex-col gap-3 p-4">

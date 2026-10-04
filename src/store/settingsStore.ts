@@ -10,6 +10,8 @@ import { appStorage, type AppStorage } from '../storage'
 export interface SettingsStoreState {
   settings: Settings
   update(patch: Partial<Settings>): void
+  // Re-reads the stored settings, after an import replaced them.
+  reload(): void
 }
 
 export interface SettingsStoreDeps {
@@ -36,6 +38,12 @@ export function createSettingsStore({
       const settings = sanitizeSettings({ ...get().settings, ...patch })
       set({ settings })
       storage.update((state) => ({ ...state, settings }))
+      sound.setVolumes(volumesOf(settings))
+    },
+
+    reload() {
+      const { settings } = storage.state
+      set({ settings })
       sound.setVolumes(volumesOf(settings))
     },
   }))

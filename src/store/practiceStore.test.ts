@@ -10,6 +10,7 @@ import {
   type PresetProgress,
   type SessionOptions,
 } from '../practice'
+import { defaultState } from '../storage'
 import { degreeAt, getPreset, type Degree, type PresetId } from '../theory'
 import { createPracticeStore } from './practiceStore'
 import { memoryStorage, recordingSound } from './testing'
@@ -289,5 +290,38 @@ describe('practiceStore', () => {
     const practice = t.store.getState().session?.practice
     expect(practice?.degreeStats[played]?.outcomes).toEqual([true])
     expect(practice?.progress.passWindows[played]).toEqual([true])
+  })
+
+  it('resets one preset to fresh, leaving the others and the shared stats', () => {
+    const t = setup(allPassed('major'))
+    t.storage.update((state) => ({
+      ...state,
+      presetProgress: { ...state.presetProgress, minor: allPassed('minor') },
+    }))
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS)
+    const played = degreeAt(t.prompt()[0]!)
+    t.answerRight()
+    t.store.getState().close()
+
+    t.store.getState().resetPreset('major')
+    const { records } = t.store.getState()
+    expect(records.presetProgress.major).toBeUndefined()
+    expect(records.presetProgress.minor).toEqual(allPassed('minor'))
+    expect(records.degreeStats[played].outcomes).toEqual([true])
+    expect(t.storage.state.presetProgress.major).toBeUndefined()
+  })
+
+  it('an import replaces the stored state and the records', () => {
+    const t = setup(allPassed('major'))
+    const imported = {
+      ...defaultState(),
+      presetProgress: { combined: allPassed('combined') },
+    }
+    t.store.getState().importState(imported)
+    expect(t.storage.state).toEqual(imported)
+    expect(t.store.getState().records.presetProgress).toEqual({
+      combined: allPassed('combined'),
+    })
   })
 })

@@ -54,6 +54,13 @@ export interface PracticeStoreState {
   end(): void
   // Dismiss the Report (or abandon a session outright).
   close(): void
+
+  // Settings (§7.5), offered from Home only, never mid-session. A reset opens
+  // the preset fresh; the shared stats stay (§4, §5).
+  resetPreset(presetId: PresetId): void
+  // Replaces everything stored with an imported backup. The settings store
+  // must reload after it.
+  importState(state: PersistedState): void
 }
 
 export interface PracticeStoreDeps {
@@ -211,6 +218,19 @@ export function createPracticeStore({
         step(endSession)
         clearTimers()
         set({ session: null })
+      },
+
+      resetPreset(presetId) {
+        storage.update((state) => {
+          const { [presetId]: _reset, ...presetProgress } = state.presetProgress
+          return { ...state, presetProgress }
+        })
+        set({ records: recordsOf(storage.state) })
+      },
+
+      importState(state) {
+        storage.update(() => state)
+        set({ records: recordsOf(storage.state) })
       },
     }
   })
