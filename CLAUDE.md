@@ -118,6 +118,6 @@ phone app, so re-read it instead of relying on what the session saw earlier.
 
 - "Add a todo" / "remind me to …" → create a task there. Keep the title short; put the detail in `content`.
 - "What's left?" / "my tasks" → list its open tasks.
-- After finishing work a task covers, offer to mark it complete. At the end of a session, offer to log known follow-ups; don't add tasks unasked.
+- After finishing work a task covers, offer to mark it complete. At the end of a session, offer to log feature or idea follow-ups only — build and implementation steps never go in TickTick (they live in the status line above); don't add tasks unasked.
 - Don't write `#` followed by a word or number in titles or content: TickTick turns it into a tag. Write "item 3", not "#3".
 - Keep secrets, credentials and vulnerability details out of task text; point to the local file instead.
