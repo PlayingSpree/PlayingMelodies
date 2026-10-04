@@ -23,10 +23,10 @@ describe('WebAudioSound', () => {
     sound.startDrone(48)
     sound.play(48, promptCue([4], 'normal'))
     sound.silence()
-    const drone = ctx.oscillators.filter((o) => o.type === 'sawtooth')
+    const drone = ctx.oscillators.filter((o) => o.type === 'custom')
     expect(drone).toHaveLength(3)
     expect(drone.every((o) => o.stoppedAt.length === 0)).toBe(true)
-    const notes = ctx.oscillators.filter((o) => o.type !== 'sawtooth')
+    const notes = ctx.oscillators.filter((o) => o.type !== 'custom')
     expect(notes.every((o) => o.stoppedAt.length === 2)).toBe(true)
   })
 

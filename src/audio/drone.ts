@@ -3,9 +3,10 @@
 //
 // Voicing: the tonic an octave below the tonic MIDI note, the fifth above
 // that, and the tonic itself. Phone speakers barely reproduce anything under
-// ~200 Hz and the low tonic sits at 65–123 Hz, so each pitch is a sawtooth
-// through a gentle lowpass: the upper harmonics carry the pitch on a small
-// speaker, and the filter keeps the buzz down to an organ-like hum.
+// ~200 Hz and the low tonic sits at 65–123 Hz, so each pitch needs overtones
+// to carry it on a small speaker. A sawtooth has them but buzzes (they fall
+// off only as 1/n); this wave keeps the first eight at 1/n², a soft
+// organ-like tone that sounds the same at every tonic.
 
 import {
   sharedAudioContext,
@@ -19,8 +20,8 @@ const PITCHES: ReadonlyArray<{ offset: number; gain: number }> = [
   { offset: -5, gain: 0.3 },
   { offset: 0, gain: 0.25 },
 ]
-const LOWPASS_HZ = 1200
-// Saws are loud: this keeps the drone under the test notes at equal settings.
+const HARMONICS = 8
+// Keeps the drone under the test notes at equal settings.
 const MASTER_LEVEL = 0.2
 const FADE_IN_SECONDS = 0.6
 const FADE_OUT_SECONDS = 0.4
@@ -34,6 +35,7 @@ interface Voice {
 export class Drone {
   private readonly shared: SharedAudioContext
   private master: GainNode | null = null
+  private wave: PeriodicWave | null = null
   private volume = 1
   private voice: Voice | null = null
   // What should be sounding: requests are recorded here and carried out
@@ -86,6 +88,16 @@ export class Drone {
     return this.master
   }
 
+  private softWave(ctx: AudioContext): PeriodicWave {
+    if (this.wave === null) {
+      const real = new Float32Array(HARMONICS + 1)
+      const imag = new Float32Array(HARMONICS + 1)
+      for (let n = 1; n <= HARMONICS; n++) imag[n] = 1 / (n * n)
+      this.wave = ctx.createPeriodicWave(real, imag)
+    }
+    return this.wave
+  }
+
   private sound(ctx: AudioContext, tonicMidi: number, fadeIn: number): Voice {
     const now = ctx.currentTime
     const envelope = ctx.createGain()
@@ -94,19 +106,14 @@ export class Drone {
     envelope.gain.linearRampToValueAtTime(1, now + fadeIn)
     envelope.connect(this.masterGain(ctx))
 
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'lowpass'
-    filter.frequency.value = LOWPASS_HZ
-    filter.connect(envelope)
-
     const oscillators = PITCHES.map(({ offset, gain }) => {
       const osc = ctx.createOscillator()
-      osc.type = 'sawtooth'
+      osc.setPeriodicWave(this.softWave(ctx))
       osc.frequency.value = frequencyOf(tonicMidi + offset)
       const pitchGain = ctx.createGain()
       pitchGain.gain.value = gain
       osc.connect(pitchGain)
-      pitchGain.connect(filter)
+      pitchGain.connect(envelope)
       osc.start(now)
       return osc
     })

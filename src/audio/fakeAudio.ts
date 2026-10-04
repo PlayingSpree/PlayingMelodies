@@ -56,11 +56,27 @@ export class FakeNode {
   }
 }
 
+export class FakeWave {
+  readonly real: Float32Array
+  readonly imag: Float32Array
+
+  constructor(real: Float32Array, imag: Float32Array) {
+    this.real = real
+    this.imag = imag
+  }
+}
+
 export class FakeOscillator extends FakeNode {
   type = ''
+  wave: FakeWave | null = null
   frequency = new FakeParam()
   startedAt: number[] = []
   stoppedAt: number[] = []
+
+  setPeriodicWave(wave: FakeWave) {
+    this.type = 'custom'
+    this.wave = wave
+  }
 
   start(at: number) {
     this.startedAt.push(at)
@@ -107,6 +123,10 @@ export class FakeAudioContext {
     const filter = new FakeFilter()
     this.filters.push(filter)
     return filter
+  }
+
+  createPeriodicWave(real: Float32Array, imag: Float32Array) {
+    return new FakeWave(real, imag)
   }
 
   // resume() deliberately does NOT flip state — real contexts stay

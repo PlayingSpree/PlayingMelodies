@@ -24,6 +24,18 @@ describe('Drone', () => {
     expect(pitches[2]).toBeCloseTo(frequencyOf(48))
   })
 
+  it('voices every pitch with one soft wave, overtones falling as 1/n²', () => {
+    const ctx = new FakeAudioContext()
+    const drone = droneOn(ctx)
+    drone.start(48)
+    drone.retune(53, 2000)
+    const wave = ctx.oscillators[0]!.wave!
+    expect(ctx.oscillators.every((o) => o.wave === wave)).toBe(true)
+    expect(wave.imag[1]).toBe(1)
+    expect(wave.imag[2]).toBeCloseTo(1 / 4)
+    expect(wave.imag[3]).toBeCloseTo(1 / 9)
+  })
+
   it('fades in and never schedules its own end', () => {
     const ctx = new FakeAudioContext()
     droneOn(ctx).start(48)
