@@ -12,13 +12,14 @@ Sister app to PlayingChord (`E:\GitRepo\PlayingChord`): same look and tooling,
 but no MIDI — it targets phone browsers, **iPhone Safari first-class**, as an
 installable offline PWA.
 
-Status: spec and scaffold deployed (a placeholder screen); the pure domain core
-(`theory/`, `practice/`, `storage/`) and the session runner (`practice/session.ts`,
-a pure state machine that emits audio and timer effects), the audio interface
-(`audio/sound.ts`: drone and cue playback), the stores that drive the runner
-(`store/`) and every screen in §7 — Home, session sheet, Stage with the pad,
-Report, Settings — are built on `dev`. Next up: a phone check of the whole app,
-then deploying it to `master` when asked.
+Status: the whole app is built and deployed — the pure domain core (`theory/`,
+`practice/`, `storage/`), the session runner (`practice/session.ts`, a pure state
+machine that emits audio and timer effects), the audio interface (`audio/sound.ts`:
+drone and cue playback), the stores that drive the runner (`store/`) and every
+screen in §7 (Home, session sheet, Stage with the pad, Report, Settings). Next up:
+a phone check of the live app; feature ideas live in TickTick. Players now hold
+real v1 state, so a schema change old data can't load needs a version bump and a
+migration (`storage/migrate.ts`).
 
 ## DESIGN.md — the spec
 
