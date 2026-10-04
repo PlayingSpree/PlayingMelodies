@@ -4,7 +4,7 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.2.0** (2026-10-04). Revision history lives in
+Spec version: **0.2.1** (2026-10-04). Revision history lives in
 [CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
 sequencing is intentionally left outside this document.
 
@@ -40,7 +40,8 @@ sequencing is intentionally left outside this document.
 ### Non-goals
 
 - **No absolute pitch.** Notes are never named as C, F♯ …; the tonic is random by
-  default precisely so nothing can be learned by pitch memory (§3.2).
+  default precisely so nothing can be learned by pitch memory (§3.2). The tonic
+  lock is the one exception: it picks a pitch, so it names one.
 - **No rhythm.** Melody notes are evenly spaced; rhythm dictation is a different
   skill (§6.3).
 - **No chords or intervals as answers.** Chord-by-ear lives in PlayingChord, where
@@ -98,7 +99,9 @@ just presets choosing which degrees to drill.
 ### 3.2 The tonic
 
 - **Random per session** by default, so nothing can be learned by remembering a
-  pitch. The session sheet can **lock** it to a chosen tonic.
+  pitch. The session sheet can **lock** it to a chosen tonic, named by its note
+  (C, D♭ … B) — choosing a pitch is the one place a name is the clearest label.
+  Everything played over it is still a degree.
 - **Change every X answers** (setting: off / 10 / 20 / 30, default off). The new
   tonic is random and always differs from the old one. The drone **crossfades** to
   it over ~2 s, then a ~2 s **settle pause** passes before the next prompt — the

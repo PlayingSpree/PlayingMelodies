@@ -42,6 +42,9 @@
   --color-warn: #fbbf24;
   --color-warn-tint: #3a2a0c;
 
+  /* Speed's bronze star (gold is warn, silver ink-soft) */
+  --color-bronze: #d08a4e;
+
   /* Hard offset shadow (no blur) — cards 3px, buttons 2px, primary 4px green */
   --shadow-hard: 0 3px 0 #0a0c1a;
   --shadow-hard-sm: 0 2px 0 #0a0c1a;
@@ -67,4 +70,15 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-info);
   outline-offset: 2px;
+}
+
+/* Speed's time limit draining (§7.3): a bar scaled from full to empty over
+   the limit, restarted per prompt by remounting it. */
+@keyframes drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }

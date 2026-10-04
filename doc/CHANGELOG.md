@@ -10,6 +10,12 @@ produced it.
 
 ---
 
+## 0.2.1 — 2026-10-04
+
+**The tonic lock names its pitch.** The session sheet's tonic lock lists the 12
+tonics by note name (C, D♭ … B); the "never a note name" rule is about degrees,
+and choosing a pitch is the one place a name is the clearest label (§1, §3.2).
+
 ## 0.2.0 — 2026-10-04
 
 **Passing reads per-preset answers.** Each preset keeps its own last-5 Notes

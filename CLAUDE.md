@@ -15,10 +15,10 @@ installable offline PWA.
 Status: spec and scaffold deployed (a placeholder screen); the pure domain core
 (`theory/`, `practice/`, `storage/`) and the session runner (`practice/session.ts`,
 a pure state machine that emits audio and timer effects), the audio interface
-(`audio/sound.ts`: drone and cue playback) and the stores that drive the runner
-(`store/`) are built and tested on `dev`, with no screens yet — the placeholder
-carries a temporary sound-check panel. Next up are the screens and the Report
-(§7).
+(`audio/sound.ts`: drone and cue playback), the stores that drive the runner
+(`store/`) and the screens — Home, session sheet, Stage with the pad, Report — are
+built on `dev`. Next up is the Settings screen (§7.5), with import/export and
+per-preset reset.
 
 ## DESIGN.md — the spec
 
