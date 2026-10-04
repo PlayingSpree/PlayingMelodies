@@ -69,6 +69,12 @@ screen as a full-screen app, and a service worker precaches the whole build, so 
 runs with no network once visited. It asks for **persistent** storage, since
 `localStorage` holds the only copy of the player's stats.
 
+**Updates never land mid-session.** A new version downloads in the background and
+waits; Home then shows an **Update ready** card whose Reload switches to it (§7.1).
+Ignored, it takes over once every window of the app has closed. The app checks for
+a new version on launch and whenever it returns to the foreground, since iOS
+resumes an installed app rather than relaunching it.
+
 **iOS audio** needs verifying on a real device before the audio layer is built on:
 audio can only start from a user gesture (the session's Start tap does it), and
 Safari may silence Web Audio when the ring/silent switch is set to silent.
@@ -251,6 +257,8 @@ for a phone in portrait, one-thumb reachable.
 
 ### 7.1 Home
 
+- **Update ready:** when a new version is waiting, a card above everything else
+  offers a Reload (§2). Only Home shows it, so it never interrupts a session.
 - **Top:** the streak and today's active minutes against the daily goal.
 - **One card per preset**, showing unlock progress, a strip of its degrees' letter
   grades, their stars once Speed is open, and the preset's melody grade once Melody

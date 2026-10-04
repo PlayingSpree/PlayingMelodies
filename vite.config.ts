@@ -40,10 +40,11 @@ export default defineConfig({
     tailwindcss(),
     // Installable and offline (§2). 'prompt' leaves a new service worker
     // waiting instead of skipWaiting-and-reload, so an update never lands
-    // mid-session: it takes over once every window of the app has closed.
+    // mid-session: Home offers a reload (src/pwa.ts registers it), or it
+    // takes over once every window of the app has closed.
     VitePWA({
       registerType: 'prompt',
-      injectRegister: 'script-defer',
+      injectRegister: false,
       // public/ PNGs (favicon, icons) come in through the glob below.
       includeManifestIcons: false,
       manifest: {

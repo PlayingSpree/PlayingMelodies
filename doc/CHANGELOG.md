@@ -10,6 +10,13 @@ produced it.
 
 ---
 
+## 0.5.0 — 2026-10-04
+
+**Home offers updates.** When a new version has downloaded, Home shows an Update
+ready card with a Reload; the app checks on launch and on returning to the
+foreground. An ignored update still takes over once the app is fully closed (§2,
+§7.1).
+
 ## 0.4.0 — 2026-10-04
 
 **The session sheet remembers its choices across reloads.** The last session's

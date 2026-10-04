@@ -9,11 +9,14 @@ import '@fontsource/bricolage-grotesque/latin-700.css'
 import '@fontsource/bricolage-grotesque/latin-800.css'
 import './index.css'
 import App from './App.tsx'
+import { startServiceWorker } from './pwa'
 
 // localStorage is the only copy of the user's stats (§2), and best-effort storage
 // can be evicted under disk pressure. Ask for persistent storage; Chrome grants
 // it silently for installed or well-used sites, and a refusal changes nothing.
 void navigator.storage?.persist?.().catch(() => false)
+
+startServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

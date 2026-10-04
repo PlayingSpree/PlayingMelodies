@@ -1,7 +1,8 @@
 // Home (DESIGN.md §7.1): the streak and today's minutes against the goal,
 // then one card per preset — unlock progress, its degrees' letter grades,
 // their stars once Speed is open, and the melody grade once Melody is open.
-// Tapping a card opens its session sheet; the gear opens Settings.
+// Tapping a card opens its session sheet; the gear opens Settings. A card
+// on top offers a reload when a new version of the app is waiting.
 
 import { useState } from 'react'
 import {
@@ -13,6 +14,7 @@ import {
   starOf,
   windowGrade,
 } from '../practice'
+import { reloadToUpdate, useUpdateReady } from '../pwa'
 import { usePractice, useSettings } from '../store'
 import { degreeLabel, PRESETS, type PresetId } from '../theory'
 import { cx } from './cx'
@@ -28,6 +30,7 @@ export function Home({
 }) {
   const records = usePractice((s) => s.records)
   const goal = useSettings((s) => s.settings.goalMinutes)
+  const updateReady = useUpdateReady()
 
   // Read once per mount; Home and the Report remount after every session.
   const [todayKey] = useState(() => localDateKey(new Date()))
@@ -53,6 +56,15 @@ export function Home({
           ⚙
         </RaisedButton>
       </header>
+
+      {updateReady && (
+        <Card className="flex items-center justify-between gap-3 border-info-border bg-info-tint p-4">
+          <span className="font-semibold text-info-light">Update ready</span>
+          <RaisedButton size="sm" variant="primary" onClick={reloadToUpdate}>
+            Reload
+          </RaisedButton>
+        </Card>
+      )}
 
       <Card className="flex flex-col gap-3 p-4">
         <div className="flex items-baseline justify-between">
