@@ -2,7 +2,7 @@
 // for the screens, and the session in progress. It drives the pure session
 // runner — each action calls a runner step, keeps the new state, and carries
 // out the step's effects: audio through Sound, waits as timers that call the
-// runner back. After every step it writes what changed through to storage:
+// runner back, and during feedback which pad key is sounding. After every step it writes what changed through to storage:
 // the records when an answer was graded, and new active time to today.
 
 import { createStore } from 'zustand/vanilla'
@@ -25,10 +25,11 @@ import {
   type SessionOptions,
   type SessionState,
   type SessionStep,
+  type Cue,
   type Settings,
 } from '../practice'
 import { appStorage, type AppStorage, type PersistedState } from '../storage'
-import { getPreset, type Degree, type PresetId } from '../theory'
+import { degreeAt, getPreset, type Degree, type PresetId } from '../theory'
 import { settingsStore } from './settingsStore'
 
 export type PracticeRecords = Pick<
@@ -42,6 +43,9 @@ export interface PracticeStoreState {
   session: SessionState | null
   // The session sheet's last choices, saved with each start.
   lastOptions: SessionOptions
+  // The degree whose feedback note is sounding now, lit on the pad so each
+  // sound can be matched to its key (§6.1). Prompts never light one.
+  sounding: Degree | null
 
   // Must be called synchronously from the Start tap's handler: starting the
   // drone there is what unlocks audio on iOS (§2).
@@ -98,7 +102,27 @@ export function createPracticeStore({
       timers.add(timer)
     }
 
-    function carryOut(effects: readonly SessionEffect[]): void {
+    // Lights each note's key for as long as it sounds. A note that ends
+    // only clears the key it lit, so the next one may already have taken over.
+    let notesLit = 0
+    let litNote = 0
+    function lightNotes(cue: Cue): void {
+      for (const { position, atMs, durationMs } of cue.notes) {
+        const note = ++notesLit
+        wake(() => {
+          litNote = note
+          set({ sounding: degreeAt(position) })
+        }, atMs)
+        wake(() => {
+          if (litNote === note) set({ sounding: null })
+        }, atMs + durationMs)
+      }
+    }
+
+    function carryOut(
+      effects: readonly SessionEffect[],
+      phase: SessionState['phase']['kind'],
+    ): void {
       for (const effect of effects) {
         switch (effect.kind) {
           case 'startDrone':
@@ -115,6 +139,7 @@ export function createPracticeStore({
             break
           case 'play':
             sound.play(effect.tonicMidi, effect.cue)
+            if (phase === 'feedback') lightNotes(effect.cue)
             break
           case 'wake':
             if (effect.call === 'advance') {
@@ -167,15 +192,17 @@ export function createPracticeStore({
       const { state, effects } = run(before)
       set({ session: state })
       persist(before, state)
+      if (state.phase.kind !== 'feedback') set({ sounding: null })
       // A finished session needs no more callbacks.
       if (state.phase.kind === 'done') clearTimers()
-      carryOut(effects)
+      carryOut(effects, state.phase.kind)
     }
 
     return {
       records: recordsOf(storage.state),
       session: null,
       lastOptions: storage.state.lastOptions,
+      sounding: null,
 
       start(presetId, options) {
         clearTimers()
@@ -193,9 +220,9 @@ export function createPracticeStore({
           now(),
           rng,
         )
-        set({ session: state, lastOptions: options })
+        set({ session: state, lastOptions: options, sounding: null })
         storage.update((stored) => ({ ...stored, lastOptions: options }))
-        carryOut(effects)
+        carryOut(effects, state.phase.kind)
       },
 
       tap(degree) {

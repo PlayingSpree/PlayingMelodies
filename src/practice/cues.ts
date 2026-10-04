@@ -24,13 +24,15 @@ export const PROMPT_NOTE_MS = 1200
 // Right: a short confirmation, then on (§6.1).
 export const RIGHT_FEEDBACK_MS = 1000
 
-// Wrong: tapped, correct, then correct resolving to the tonic (§6.1), each
-// FEEDBACK_STEP_MS apart; the resolution moves quicker and holds the tonic.
-export const FEEDBACK_STEP_MS = 1000
+// Wrong: the tapped note, a silent pause so it doesn't run into the answer,
+// then the correct note resolving to the tonic, which it holds (§6.1).
 export const FEEDBACK_NOTE_MS = 900
-export const RESOLVE_STEP_MS = 600
+export const TAPPED_PAUSE_MS = 700
+export const RESOLVE_STEP_MS = 900
 export const RESOLVE_HOLD_MS = 1500
 export const FEEDBACK_TAIL_MS = 800
+// Melody's tapped-versus-correct pairs start this far apart (§6.3).
+export const FEEDBACK_STEP_MS = 1000
 
 // Melody notes are evenly spaced (§6.3); each sounds for most of its step.
 export const TEMPO_STEP_MS: Readonly<Record<Tempo, number>> = {
@@ -77,18 +79,16 @@ export function rightCue(): Cue {
 }
 
 // A miss in Notes or Speed (§6.1, §6.2): the tapped note — none for a Speed
-// timeout — then the correct note, then the correct note resolving.
+// timeout — then the correct note resolving.
 export function wrongCue(played: number, tapped: Degree | null): Cue {
   const notes: CueNote[] = []
   let at = 0
-  const note = (position: number, durationMs = FEEDBACK_NOTE_MS) =>
+  const note = (position: number, durationMs: number) =>
     notes.push({ position, atMs: at, durationMs })
   if (tapped !== null) {
-    note(besideOf(played, tapped))
-    at += FEEDBACK_STEP_MS
+    note(besideOf(played, tapped), FEEDBACK_NOTE_MS)
+    at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
   }
-  note(played)
-  at += FEEDBACK_STEP_MS
   const tonic = resolveToTonic(played)
   if (tonic === null) {
     note(played, RESOLVE_HOLD_MS)
@@ -119,7 +119,7 @@ export function melodyFeedbackCue(
       atMs: at,
       durationMs: FEEDBACK_NOTE_MS,
     })
-    at += FEEDBACK_STEP_MS
+    at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
     notes.push({ position, atMs: at, durationMs: FEEDBACK_NOTE_MS })
   })
   return { notes, lengthMs: at + FEEDBACK_STEP_MS + FEEDBACK_TAIL_MS }

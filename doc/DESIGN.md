@@ -206,10 +206,15 @@ The core drill, and the only mode that unlocks anything. Deals the preset's
 **unlocked** degrees.
 
 - One note plays; the player taps a degree. The **first tap** is graded.
-- **Right** → a short confirmation, auto-advance after ~1 s.
-- **Wrong** → the app plays the tapped note, then the correct note, then the correct
-  note **resolving to the tonic** — the "where does it want to go" cue drone methods
-  teach with — and then advances.
+- **Right** → a short confirmation — the correct degree with a ✓ — and
+  auto-advance after ~1 s.
+- **Wrong** → the tapped degree with a ✗ beside the correct one with a ✓, no words.
+  The app plays the tapped note, a short silent pause so the two don't run
+  together, then the correct note once, **resolving to the tonic** — the "where
+  does it want to go" cue drone methods teach with — and then advances.
+- While feedback plays, each note's pad key **lights up as it sounds**, so every
+  sound can be matched to its key (§7.3). Prompts never light a key: that would
+  give the answer away.
 - **Replay** is free at any time before answering.
 - Response time is recorded and shown on the Report, but never graded here; fast
   guessing is a habit to avoid while a degree is still being learned. Speed is
@@ -223,7 +228,8 @@ Timing degrees not yet heard reliably would only train guessing.
 - Plays exactly as Notes, against a **fixed 5 s limit** per note. Running out of
   time is a miss.
 - Each answer's time (or 5 s, for a miss) feeds the degree's star (§5).
-- Feedback on a miss is the same as in Notes.
+- Feedback on a miss is the same as in Notes; a timeout shows the ✗ with no
+  tapped degree, and plays no tapped note.
 
 ### 6.3 Melody
 
@@ -243,7 +249,8 @@ Opening at 3 rather than at a fully passed preset lets melodies start early.
   undo key. Replay is free until the last slot is filled. Checking happens only
   then — per-note checking would give away the rest of the melody.
 - **Feedback:** each slot is marked ✓ or ✗, the melody replays as played, and each
-  wrong slot then plays tapped-versus-correct.
+  wrong slot then plays tapped-versus-correct, with the same pause between them as
+  in Notes. The keys light as they sound, as in Notes.
 - **Grading:** a melody is **clean** only if every note is right. The preset's
   **melody grade** is the share of clean melodies over its last 10, on the same
   letter bands as §5. Wrong notes feed the confusion log; nothing else (§5).
@@ -281,6 +288,9 @@ preset falls back to Notes.
   **dimmed**. Nothing ever moves, so the thumb learns positions along with the ear.
 - Above the pad: replay, the session's progress, and — in Speed — the time limit
   draining; in Melody, the answer slots and undo.
+- After an answer the pad keeps the tapped key marked right or wrong, and on a
+  miss outlines the correct one; during feedback the key whose note is sounding
+  lights up (§6.1).
 
 ### 7.4 Report
 

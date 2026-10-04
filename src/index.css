@@ -50,6 +50,8 @@
   --shadow-hard-sm: 0 2px 0 #0a0c1a;
   --shadow-hard-lg: 0 6px 0 #0a0c1a;
   --shadow-primary: 0 4px 0 var(--color-primary-shadow);
+  /* Soft halo around a pad key while its note sounds */
+  --shadow-glow: 0 0 36px 14px rgb(244 242 255 / 0.75);
 }
 
 /* The app is dark-only; letting the browser know keeps native widgets

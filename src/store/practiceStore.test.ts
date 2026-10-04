@@ -7,6 +7,7 @@ import {
   RIGHT_FEEDBACK_MS,
   SETTLE_MS,
   SPEED_LIMIT_MS,
+  type Cue,
   type PresetProgress,
   type SessionOptions,
 } from '../practice'
@@ -142,13 +143,47 @@ describe('practiceStore', () => {
     expect(t.storage.state.confusions).toHaveLength(1)
     const [, , cue] = t.callsOf('play').at(-1)!
     const { notes, lengthMs } = cue as { notes: unknown[]; lengthMs: number }
-    expect(notes.length).toBeGreaterThanOrEqual(3)
+    expect(notes.length).toBeGreaterThanOrEqual(2)
     expect(t.callsOf('silence').length).toBeGreaterThan(0)
 
     vi.advanceTimersByTime(lengthMs - 1)
     expect(t.phase()?.kind).toBe('feedback')
     vi.advanceTimersByTime(1)
     expect(t.phase()?.kind).toBe('answering')
+  })
+
+  it('lights each feedback note’s key while it sounds', () => {
+    const t = setup()
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS)
+    const sounding = () => t.store.getState().sounding
+    expect(sounding()).toBeNull() // a prompt gives nothing away
+    t.answerWrong()
+    const [, , cue] = t.callsOf('play').at(-1)!
+    const { notes } = cue as Cue
+
+    let elapsed = 0
+    for (const note of notes) {
+      vi.advanceTimersByTime(note.atMs - elapsed)
+      expect(sounding()).toBe(degreeAt(note.position))
+      elapsed = note.atMs
+    }
+    const last = notes.at(-1)!
+    vi.advanceTimersByTime(last.durationMs)
+    expect(sounding()).toBeNull()
+  })
+
+  it('goes dark when the session is quit mid-feedback', () => {
+    const t = setup()
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS)
+    t.answerWrong()
+    vi.advanceTimersByTime(0)
+    expect(t.store.getState().sounding).not.toBeNull()
+    t.store.getState().end()
+    expect(t.store.getState().sounding).toBeNull()
+    vi.runAllTimers()
+    expect(t.store.getState().sounding).toBeNull()
   })
 
   it('taps outside an open prompt are ignored', () => {

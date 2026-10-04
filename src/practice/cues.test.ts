@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   besideOf,
+  FEEDBACK_NOTE_MS,
   FEEDBACK_STEP_MS,
   melodyFeedbackCue,
   promptCue,
   resolveToTonic,
   rightCue,
   RIGHT_FEEDBACK_MS,
+  TAPPED_PAUSE_MS,
   TEMPO_STEP_MS,
   wrongCue,
   type Cue,
@@ -62,16 +64,25 @@ describe('rightCue', () => {
 })
 
 describe('wrongCue', () => {
-  it('plays tapped, correct, then correct resolving', () => {
-    expect(positions(wrongCue(9, 7))).toEqual([7, 9, 9, 12])
+  it('plays tapped, then correct resolving', () => {
+    expect(positions(wrongCue(9, 7))).toEqual([7, 9, 12])
+  })
+
+  it('pauses between the tapped note and the correct one', () => {
+    const [tapped, correct] = wrongCue(9, 7).notes
+    expect((correct?.atMs ?? 0) - (tapped?.durationMs ?? 0)).toBe(
+      TAPPED_PAUSE_MS,
+    )
   })
 
   it('skips the tapped note for a timeout', () => {
-    expect(positions(wrongCue(16, null))).toEqual([16, 16, 12])
+    const cue = wrongCue(16, null)
+    expect(positions(cue)).toEqual([16, 12])
+    expect(cue.notes[0]?.atMs).toBe(0)
   })
 
   it('holds the tonic instead of resolving it', () => {
-    expect(positions(wrongCue(12, 11))).toEqual([23, 12, 12])
+    expect(positions(wrongCue(12, 11))).toEqual([23, 12])
   })
 
   it('runs past its last note', () => {
@@ -89,6 +100,9 @@ describe('melodyFeedbackCue', () => {
     expect(positions(cue)).toEqual([0, 2, 16, 3, 2, 17, 16])
     const replayEnd = 3 * TEMPO_STEP_MS.normal
     expect(cue.notes[3]?.atMs).toBe(replayEnd + FEEDBACK_STEP_MS)
+    expect(cue.notes[4]?.atMs).toBe(
+      replayEnd + FEEDBACK_STEP_MS + FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS,
+    )
   })
 
   it('only replays a clean melody', () => {

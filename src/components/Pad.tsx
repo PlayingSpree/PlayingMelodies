@@ -1,7 +1,8 @@
 // The answer pad (DESIGN.md §7.3): all 12 degrees in a fixed, piano-like
 // layout — naturals on the bottom row, the flats and sharp raised between
 // them. Degrees outside the preset are blank and the not-yet-unlocked ones
-// dimmed, but nothing ever moves, so the thumb learns the positions.
+// dimmed, but nothing ever moves, so the thumb learns the positions. During
+// feedback the key whose note is sounding lights up.
 //
 // The grid is 14 half-columns: each natural spans two, and a raised key
 // spans the two either side of the boundary it sits on — so PAD_LAYOUT's
@@ -28,11 +29,13 @@ export function Pad({
   inPreset,
   unlocked,
   marks = {},
+  sounding = null,
   onTap,
 }: {
   inPreset: ReadonlySet<Degree>
   unlocked: ReadonlySet<Degree>
   marks?: Partial<Record<Degree, KeyMark>>
+  sounding?: Degree | null
   onTap: (degree: Degree) => void
 }) {
   return (
@@ -46,6 +49,7 @@ export function Pad({
           return <div key={degree} style={place} aria-hidden />
         }
         const mark = marks[degree]
+        const lit = degree === sounding
         return (
           <button
             key={degree}
@@ -54,14 +58,20 @@ export function Pad({
             onClick={() => onTap(degree)}
             aria-label={`Degree ${degreeLabel(degree)}`}
             className={cx(
-              'rounded-2xl border-2 text-2xl font-extrabold shadow-hard-sm transition-transform active:translate-y-[2px]',
+              'rounded-2xl border-2 text-2xl font-extrabold transition-[transform,box-shadow] active:translate-y-[2px]',
+              lit
+                ? 'z-10 scale-110 shadow-glow ring-4 ring-ink'
+                : 'shadow-hard-sm',
               mark === undefined ? 'border-card-border' : MARK_BORDER[mark],
               mark === 'right' || mark === 'wrong'
                 ? MARK_FILL[mark]
                 : row === 'raised'
                   ? 'bg-track'
                   : 'bg-card',
-              !unlocked.has(degree) && mark === undefined && 'opacity-40',
+              !unlocked.has(degree) &&
+                mark === undefined &&
+                !lit &&
+                'opacity-40',
             )}
           >
             {degreeLabel(degree)}

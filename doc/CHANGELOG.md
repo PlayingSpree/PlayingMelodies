@@ -10,6 +10,14 @@ produced it.
 
 ---
 
+## 0.6.0 — 2026-10-04
+
+**Clearer miss feedback.** The correct note plays once, after a short silent pause
+following the tapped note, then resolves to the tonic; Melody's tapped-versus-correct
+pairs get the same pause. While feedback plays, each note's pad key lights up as it
+sounds. The feedback text is gone: a right answer shows the degree with a ✓, a miss
+the tapped degree with a ✗ beside the correct one with a ✓ (§6.1–§6.3, §7.3).
+
 ## 0.5.0 — 2026-10-04
 
 **Home offers updates.** When a new version has downloaded, Home shows an Update

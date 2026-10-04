@@ -106,17 +106,21 @@ function Status({ session }: { session: SessionState }) {
     )
   }
 
+  // Numbers only: the correct degree ✓, and on a miss the tapped one ✗
+  // before it — just ✗ for a Speed timeout.
   if (phase.kind === 'feedback') {
     const { answer } = phase
     const played = answer.played[0]
-    if (answer.correct) {
-      return <p className="text-3xl font-extrabold text-primary-light">Right</p>
-    }
+    const tapped = answer.tapped[0]
     return (
-      <p className="text-2xl font-extrabold text-danger">
-        {answer.tapped.length === 0 ? "Time's up" : 'Not quite'}
+      <p className="flex items-baseline gap-8 text-5xl font-extrabold">
+        {!answer.correct && (
+          <span className="text-danger">
+            ✗{tapped === undefined ? '' : ` ${degreeLabel(tapped)}`}
+          </span>
+        )}
         {played !== undefined && (
-          <span className="text-ink-soft"> — it was {degreeLabel(played)}</span>
+          <span className="text-primary-light">✓ {degreeLabel(played)}</span>
         )}
       </p>
     )
@@ -141,6 +145,7 @@ function Status({ session }: { session: SessionState }) {
 
 export function Stage() {
   const session = usePractice((s) => s.session)
+  const sounding = usePractice((s) => s.sounding)
   if (session === null) return null
   const { tap, undo, replay, end } = practiceStore.getState()
   const { setup, phase, practice } = session
@@ -186,6 +191,7 @@ export function Stage() {
         inPreset={new Set(preset.order)}
         unlocked={new Set(unlockedDegrees(preset, practice.progress))}
         marks={marks}
+        sounding={sounding}
         onTap={tap}
       />
     </div>
