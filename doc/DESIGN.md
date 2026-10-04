@@ -4,9 +4,9 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.1.0** (2026-10-04) — first draft, nothing built yet. Revision
-history lives in [CHANGELOG.md](CHANGELOG.md); this document describes only what the
-app *is*. Build sequencing is intentionally left outside this document.
+Spec version: **0.2.0** (2026-10-04). Revision history lives in
+[CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
+sequencing is intentionally left outside this document.
 
 **Key decisions:**
 - **Relative pitch over a drone.** Every prompt is heard against a constant tonic
@@ -136,8 +136,11 @@ as it exists.
 - A fresh preset starts with its **first 2** degrees unlocked.
 - Once **every** unlocked degree has passed, the **next 1** unlocks, until the
   whole preset is open.
-- A degree **passes** when **4 of its last 5** Notes answers are right — far above
-  guessing (with 3 degrees open, a random tap is right a third of the time).
+- A degree **passes** when **4 of its last 5** Notes answers *in that preset* are
+  right — far above guessing (with 3 degrees open, a random tap is right a third
+  of the time). The preset keeps its own 5-answer window per degree for this,
+  apart from the shared stats (§5), and it must be full: 4 straight right isn't
+  yet a pass.
 - Passing is a **latch**: a degree that later slips stays passed and its unlocks
   stay open; the live grade is shown elsewhere.
 - **Progress is per preset.** Telling 3 from 4 and 5 is easier than telling it from
@@ -159,11 +162,13 @@ answered from the answer log without changing the key.)
 Per degree:
 - **Notes outcomes** — the last 10 right/wrong results. The **grade** is a letter
   from accuracy over that window: **A ≥ 90 %, B ≥ 80 %, C ≥ 70 %, D ≥ 60 %, F
-  below**, shown as "—" until 5 answers exist. The pass rule (§4) reads the newest 5
-  of the same window.
+  below**, shown as "—" until 5 answers exist. Passing doesn't read this window:
+  it reads the preset's own (§4), or answers given in Major would pass a degree
+  the moment Combined unlocked it.
 - **Speed times** — the last 10 Speed-mode times, a miss or timeout counted as the
   full 5 s limit, so a fast wrong tap can't earn anything. The **star** is from their
-  median: **gold < 1 s, silver < 2 s, bronze < 3 s**, none from 3 s up. Stars are
+  median: **gold < 1 s, silver < 2 s, bronze < 3 s**, none from 3 s up, and none
+  until 5 times exist, so one lucky tap can't earn gold. Stars are
   deliberately not letters, so a speed rating is never mistaken for an accuracy
   grade; and "no star" is the visible gap between passing a degree and being fast
   at it. Stars never affect passing.
@@ -292,8 +297,9 @@ rest.
 
 **Persisted shapes:** a per-degree stat record (Notes outcome window, Speed time
 window), the confusion log of (played, tapped) pairs, a per-preset progress record
-(unlocked count + passed degrees + melody outcome window), daily records (date,
-active minutes) and settings. Schema-versioned from the start.
+(unlocked count, a 5-answer pass window per degree, passed degrees, melody
+outcome window), daily records (date, active minutes) and settings.
+Schema-versioned from the start.
 
 ---
 

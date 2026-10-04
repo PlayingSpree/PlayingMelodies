@@ -10,6 +10,14 @@ produced it.
 
 ---
 
+## 0.2.0 — 2026-10-04
+
+**Passing reads per-preset answers.** Each preset keeps its own last-5 Notes
+window per degree, and a degree passes on 4 right in a full window — so answers
+given in Major no longer pass a degree the moment Combined unlocks it, as reading
+the shared stats window did (§4, §5, §8). Stars, like grades, need 5 timed
+answers before one shows (§5).
+
 ## 0.1.0 — 2026-10-04
 
 **First draft.** Relative-pitch ear training over a tonic + fifth drone, answered
