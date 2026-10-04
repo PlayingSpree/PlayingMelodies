@@ -12,7 +12,8 @@ Sister app to PlayingChord (`E:\GitRepo\PlayingChord`): same look and tooling,
 but no MIDI — it targets phone browsers, **iPhone Safari first-class**, as an
 installable offline PWA.
 
-Status: spec written, scaffold only — no domain code or screens yet.
+Status: spec written and scaffold deployed (a placeholder screen) — no domain code
+or screens yet. Next up is the pure domain core (§8).
 
 ## DESIGN.md — the spec
 
@@ -88,9 +89,10 @@ has solved most session/stats/storage shapes already.
 ## Git
 
 Work happens on `dev`; `master` is the deployed branch (CI and the Pages deploy
-run on pushes to it), updated by PR from `dev`. Commit only when asked. Origin
-will be GitHub (`github.com/PlayingSpree/...`), deployed to GitHub Pages, with a
-self-hosted Gitea pull-mirroring it.
+run on pushes to it), updated by fast-forwarding it to `dev`
+(`git push origin dev:master`) — only when asked. Commit only when asked. Origin is
+GitHub (`github.com/PlayingSpree/PlayingMelodies`), live at
+https://playingspree.github.io/PlayingMelodies/; a self-hosted Gitea pull-mirrors it.
 
 ## Working with me
 
