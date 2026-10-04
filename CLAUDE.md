@@ -12,8 +12,10 @@ Sister app to PlayingChord (`E:\GitRepo\PlayingChord`): same look and tooling,
 but no MIDI — it targets phone browsers, **iPhone Safari first-class**, as an
 installable offline PWA.
 
-Status: spec written and scaffold deployed (a placeholder screen) — no domain code
-or screens yet. Next up is the pure domain core (§8).
+Status: spec and scaffold deployed (a placeholder screen); the pure domain core
+(`theory/`, `practice/`, `storage/`) is built and tested on `dev`, with no screens
+yet. Next up is the session runner (tonic changes, timing, feedback sequencing,
+active time), which sits between the core and the store.
 
 ## DESIGN.md — the spec
 
@@ -67,10 +69,10 @@ edges touch the platform:
   swapped for samples. `piano.ts` and `context.ts` are ported from PlayingChord.
 - `src/components/` + `src/store/` (Zustand) — UI layer.
 
-Planned homes for the core, following PlayingChord: `src/theory/` (degrees,
-presets as data), `src/practice/` (unlocking, grading, weighting, melody
-generation, session logic), `src/storage/` (schema-versioned persistence,
-JSON export/import).
+The core, following PlayingChord: `src/theory/` (degrees, register, presets
+as data), `src/practice/` (stats, confusions, unlocking, the dealer, melody
+generation, daily time, settings), `src/storage/` (schema-versioned
+persistence, JSON export/import).
 
 Code is **copied** from PlayingChord, not shared, until the two drift enough to
 justify a package (§9). When porting, check PlayingChord's version first — it
