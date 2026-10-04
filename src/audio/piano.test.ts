@@ -83,13 +83,13 @@ describe('Piano', () => {
     const envelope = ctx.gains.find((g) => g.gain.last('target'))!
     expect(envelope.gain.last('cancel')).toBeUndefined()
     const cut = ctx.gains.find((g) => envelope.outputs.includes(g))!
-    expect(cut.gain.events[0]).toEqual({
-      kind: 'set',
-      value: 1,
-      at: ctx.currentTime,
-    })
+    // Starting a little ahead, so the fade isn't already rendered past.
+    const hold = cut.gain.events[0]!
+    expect(hold).toMatchObject({ kind: 'set', value: 1 })
+    expect(hold.at).toBeGreaterThan(ctx.currentTime)
     const fade = cut.gain.last('linear')!
     expect(fade.value).toBe(0)
+    expect(fade.at).toBeGreaterThan(hold.at)
     for (const osc of ctx.oscillators) {
       expect(osc.stoppedAt.at(-1)).toBeGreaterThanOrEqual(fade.at)
     }

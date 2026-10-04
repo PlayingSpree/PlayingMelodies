@@ -23,8 +23,12 @@ const PEAK = 0.25
 const SUSTAIN_LEVEL = 0.25 // fraction of peak the note decays toward
 const DECAY_TIME_CONSTANT = 0.4
 const RELEASE_SECONDS = 0.25
-// How fast silence() fades a note out.
-const CUT_SECONDS = 0.06
+// silence() fades a note out over CUT_SECONDS, starting CUT_LEAD_SECONDS
+// ahead: iOS renders audio in large chunks, so the next few tens of ms may
+// already be computed by the time a tap is handled. A fade starting at
+// currentTime would lose its head there and drop in one jump — a pop.
+const CUT_LEAD_SECONDS = 0.05
+const CUT_SECONDS = 0.12
 const MASTER_LEVEL = 0.5
 
 // A simple piano-ish patch: fundamental (triangle) plus two upper partials
@@ -105,12 +109,12 @@ export class Piano {
   silence(): void {
     const ctx = this.shared.running()
     if (ctx === null) return
-    const now = ctx.currentTime
-    const end = now + CUT_SECONDS
+    const from = ctx.currentTime + CUT_LEAD_SECONDS
+    const end = from + CUT_SECONDS
     for (const voice of this.voices) {
       // Fade from wherever the envelope is to silence, then stop. A note
       // that hasn't started is stopped before its start, so it never sounds.
-      voice.cut.gain.setValueAtTime(1, now)
+      voice.cut.gain.setValueAtTime(1, from)
       voice.cut.gain.linearRampToValueAtTime(0, end)
       for (const osc of voice.oscillators) osc.stop(end)
     }
