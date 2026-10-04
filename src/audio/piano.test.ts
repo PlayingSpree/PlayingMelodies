@@ -1,180 +1,122 @@
 import { describe, expect, it } from 'vitest'
-import { Piano } from './piano'
-import { SharedAudioContext } from './context'
-
-// A minimal structural fake of the Web Audio surface the piano touches.
-
-class FakeParam {
-  value = 0
-  events: Array<{ kind: string; value: number; at: number }> = []
-  setValueAtTime(value: number, at: number) {
-    this.value = value
-    this.events.push({ kind: 'set', value, at })
-  }
-  linearRampToValueAtTime(value: number, at: number) {
-    this.value = value
-    this.events.push({ kind: 'linear', value, at })
-  }
-  exponentialRampToValueAtTime(value: number, at: number) {
-    this.value = value
-    this.events.push({ kind: 'exp', value, at })
-  }
-  cancelScheduledValues(at: number) {
-    this.events.push({ kind: 'cancel', value: 0, at })
-  }
-}
-
-class FakeNode {
-  connect(node: unknown) {
-    return node
-  }
-}
-
-class FakeOscillator extends FakeNode {
-  type = ''
-  frequency = new FakeParam()
-  startedAt: number[] = []
-  stoppedAt: number[] = []
-  start(at: number) {
-    this.startedAt.push(at)
-  }
-  stop(at: number) {
-    this.stoppedAt.push(at)
-  }
-}
-
-class FakeGain extends FakeNode {
-  gain = new FakeParam()
-}
-
-class FakeAudioContext {
-  state: AudioContextState = 'running'
-  currentTime = 2
-  destination = new FakeNode()
-  oscillators: FakeOscillator[] = []
-  gains: FakeGain[] = []
-  resumeCalls = 0
-  createOscillator() {
-    const osc = new FakeOscillator()
-    this.oscillators.push(osc)
-    return osc
-  }
-  createGain() {
-    const gain = new FakeGain()
-    this.gains.push(gain)
-    return gain
-  }
-  resume() {
-    this.resumeCalls += 1
-    return Promise.resolve()
-  }
-}
-
-const asContext = (fake: FakeAudioContext) => fake as unknown as AudioContext
+import { frequencyOf, Piano } from './piano'
+import { FakeAudioContext, sharedOn } from './fakeAudio'
 
 function pianoOn(ctx: FakeAudioContext): Piano {
-  return new Piano(new SharedAudioContext(() => asContext(ctx)))
+  return new Piano(sharedOn(ctx))
 }
 
+describe('frequencyOf', () => {
+  it('is 440 Hz at A4 and doubles per octave', () => {
+    expect(frequencyOf(69)).toBeCloseTo(440)
+    expect(frequencyOf(57)).toBeCloseTo(220)
+    expect(frequencyOf(60)).toBeCloseTo(261.63)
+  })
+})
+
 describe('Piano', () => {
-  it('noteOn schedules 3 harmonics at the fundamental, 2×, and 3×', () => {
+  it('plays each note as 3 harmonics at the fundamental, 2× and 3×', () => {
     const ctx = new FakeAudioContext()
-    pianoOn(ctx).noteOn(69, 127) // A4 = 440Hz
-    expect(ctx.oscillators).toHaveLength(3)
+    pianoOn(ctx).play([{ midi: 69, atMs: 0, durationMs: 500 }])
     const freqs = ctx.oscillators
       .map((o) => o.frequency.value)
       .sort((a, b) => a - b)
+    expect(freqs).toHaveLength(3)
     expect(freqs[0]).toBeCloseTo(440)
     expect(freqs[1]).toBeCloseTo(880)
     expect(freqs[2]).toBeCloseTo(1320)
   })
 
-  it('schedules an attack ramp on noteOn', () => {
+  it('schedules every note of a cue at once, at its offset', () => {
     const ctx = new FakeAudioContext()
-    pianoOn(ctx).noteOn(60, 100)
-    // One envelope gain plus one gain per harmonic (3).
-    const envelope = ctx.gains[0]!
-    expect(envelope.gain.events[0]?.kind).toBe('set')
-    expect(envelope.gain.events[1]?.kind).toBe('linear')
+    pianoOn(ctx).play([
+      { midi: 60, atMs: 0, durationMs: 500 },
+      { midi: 62, atMs: 600, durationMs: 500 },
+    ])
+    const starts = ctx.oscillators.map((o) => o.startedAt[0]!)
+    const first = starts[0]!
+    expect(first).toBeGreaterThan(ctx.currentTime)
+    expect(first).toBeLessThan(ctx.currentTime + 0.1)
+    expect(starts.slice(0, 3).every((t) => t === first)).toBe(true)
+    expect(starts.slice(3).every((t) => t === first + 0.6)).toBe(true)
   })
 
-  it('higher velocity produces a higher peak than lower velocity', () => {
-    const soft = new FakeAudioContext()
-    pianoOn(soft).noteOn(60, 1)
-    const softPeak = soft.gains[0]!.gain.events[1]!.value
-
-    const loud = new FakeAudioContext()
-    pianoOn(loud).noteOn(60, 127)
-    const loudPeak = loud.gains[0]!.gain.events[1]!.value
-
-    expect(loudPeak).toBeGreaterThan(softPeak)
-  })
-
-  it('noteOff schedules a release and stops the oscillators', () => {
+  it('attacks, then releases at the end of its duration', () => {
     const ctx = new FakeAudioContext()
-    const piano = pianoOn(ctx)
-    piano.noteOn(60, 100)
-    piano.noteOff(60)
-
-    const envelope = ctx.gains[0]!
-    expect(envelope.gain.events.some((e) => e.kind === 'cancel')).toBe(true)
-    expect(envelope.gain.events.at(-1)?.kind).toBe('exp')
+    pianoOn(ctx).play([{ midi: 60, atMs: 0, durationMs: 1000 }])
+    const start = ctx.oscillators[0]!.startedAt[0]!
+    const envelope = ctx.gains.find((g) => g.gain.last('linear'))!
+    expect(envelope.gain.last('linear')?.at).toBeGreaterThan(start)
+    expect(envelope.gain.last('target')).toMatchObject({
+      value: 0,
+      at: start + 1,
+    })
     for (const osc of ctx.oscillators) {
-      expect(osc.stoppedAt).toHaveLength(1)
-      expect(osc.stoppedAt[0]).toBeGreaterThan(ctx.currentTime)
+      expect(osc.stoppedAt[0]).toBeGreaterThan(start + 1)
     }
   })
 
-  it('a second noteOff for the same note is a no-op', () => {
+  it('silence cuts sounding and still-scheduled notes alike', () => {
     const ctx = new FakeAudioContext()
     const piano = pianoOn(ctx)
-    piano.noteOn(60, 100)
-    piano.noteOff(60)
-    const stopCallsAfterFirst = ctx.oscillators.map((o) => o.stoppedAt.length)
-    piano.noteOff(60)
-    const stopCallsAfterSecond = ctx.oscillators.map((o) => o.stoppedAt.length)
-    expect(stopCallsAfterSecond).toEqual(stopCallsAfterFirst)
+    piano.play([
+      { midi: 60, atMs: 0, durationMs: 1000 },
+      { midi: 64, atMs: 5000, durationMs: 1000 },
+    ])
+    ctx.currentTime += 0.5
+    piano.silence()
+    for (const osc of ctx.oscillators) {
+      const stop = osc.stoppedAt.at(-1)!
+      expect(stop).toBeLessThan(ctx.currentTime + 0.5)
+    }
+    // The later note is stopped before it starts, so it never sounds.
+    const late = ctx.oscillators[3]!
+    expect(late.stoppedAt.at(-1)!).toBeLessThan(late.startedAt[0]!)
   })
 
-  it('retriggering a held note releases the old voice and starts one new one', () => {
+  it('silence leaves notes that already ended alone', () => {
     const ctx = new FakeAudioContext()
     const piano = pianoOn(ctx)
-    piano.noteOn(60, 100)
-    piano.noteOn(60, 100)
-    // 3 harmonics per voice, 2 voices created (old released on retrigger).
-    expect(ctx.oscillators).toHaveLength(6)
+    piano.play([{ midi: 60, atMs: 0, durationMs: 200 }])
+    ctx.currentTime += 5
+    piano.play([{ midi: 62, atMs: 0, durationMs: 200 }])
+    piano.silence()
     expect(
       ctx.oscillators.slice(0, 3).every((o) => o.stoppedAt.length === 1),
     ).toBe(true)
     expect(
-      ctx.oscillators.slice(3).every((o) => o.stoppedAt.length === 0),
+      ctx.oscillators.slice(3).every((o) => o.stoppedAt.length === 2),
     ).toBe(true)
   })
 
-  it('allNotesOff releases every held voice', () => {
-    const ctx = new FakeAudioContext()
-    const piano = pianoOn(ctx)
-    piano.noteOn(60, 100)
-    piano.noteOn(64, 100)
-    piano.noteOn(67, 100)
-    piano.allNotesOff()
-    expect(ctx.oscillators.every((o) => o.stoppedAt.length === 1)).toBe(true)
-  })
-
-  it('stays silent while the context is suspended, but asks it to resume', () => {
+  it('drops notes while the context is suspended, but asks it to resume', () => {
     const ctx = new FakeAudioContext()
     ctx.state = 'suspended'
-    pianoOn(ctx).noteOn(60, 100)
+    pianoOn(ctx).play([{ midi: 60, atMs: 0, durationMs: 500 }])
     expect(ctx.oscillators).toHaveLength(0)
     expect(ctx.resumeCalls).toBe(1)
   })
 
-  it('creates the master gain once and reuses it across notes', () => {
+  it('creates the master gain once and sets it from the note volume', () => {
     const ctx = new FakeAudioContext()
     const piano = pianoOn(ctx)
-    piano.noteOn(60, 100)
-    piano.noteOn(64, 100)
-    // 2 envelopes + 6 harmonic gains + 1 shared master = 9.
-    expect(ctx.gains).toHaveLength(9)
+    piano.play([{ midi: 60, atMs: 0, durationMs: 500 }])
+    piano.play([{ midi: 64, atMs: 0, durationMs: 500 }])
+    const masters = ctx.gains.filter((g) => g.outputs.includes(ctx.destination))
+    expect(masters).toHaveLength(1)
+    const loud = masters[0]!.gain.value
+    piano.setVolume(0.5)
+    expect(masters[0]!.gain.value).toBeLessThan(loud)
+    piano.setVolume(0)
+    expect(masters[0]!.gain.value).toBe(0)
+  })
+
+  it('applies a volume set before the first note', () => {
+    const ctx = new FakeAudioContext()
+    const piano = pianoOn(ctx)
+    piano.setVolume(0)
+    piano.play([{ midi: 60, atMs: 0, durationMs: 500 }])
+    const master = ctx.gains.find((g) => g.outputs.includes(ctx.destination))
+    expect(master?.gain.value).toBe(0)
   })
 })

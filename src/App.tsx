@@ -1,3 +1,5 @@
+import SoundCheck from './components/SoundCheck'
+
 // Placeholder shell until the screens of DESIGN.md §7 are built.
 export default function App() {
   return (
@@ -11,6 +13,7 @@ export default function App() {
           __APP_BRANCH__ !== 'master' &&
           ` · ${__APP_BRANCH__}`}
       </p>
+      <SoundCheck />
     </main>
   )
 }

@@ -1,19 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { primeOnFirstGesture, SharedAudioContext } from './context'
-
-// A minimal structural fake of the Web Audio surface these tests touch.
-// resume() deliberately does NOT flip state synchronously — real contexts
-// stay 'suspended' until the returned promise settles, which is exactly the
-// window playback must stay silent (never queue a late sound).
-
-class FakeAudioContext {
-  state: AudioContextState = 'running'
-  resumeCalls = 0
-  resume() {
-    this.resumeCalls += 1
-    return Promise.resolve()
-  }
-}
+import { FakeAudioContext, sharedOn } from './fakeAudio'
 
 const asContext = (fake: FakeAudioContext) => fake as unknown as AudioContext
 
@@ -35,6 +22,9 @@ describe('SharedAudioContext', () => {
     const shared = new SharedAudioContext(() => null)
     expect(() => {
       shared.prime()
+      shared.whenRunning(() => {
+        throw new Error('never runs')
+      })
       expect(shared.running()).toBeNull()
     }).not.toThrow()
   })
@@ -42,15 +32,43 @@ describe('SharedAudioContext', () => {
   it('stays silent while the context is suspended, but asks it to resume', () => {
     const ctx = new FakeAudioContext()
     ctx.state = 'suspended'
-    const shared = new SharedAudioContext(() => asContext(ctx))
-    expect(shared.running()).toBeNull()
+    expect(sharedOn(ctx).running()).toBeNull()
+    expect(ctx.resumeCalls).toBe(1)
+  })
+
+  it('resumes an interrupted context (iOS, after a call)', () => {
+    const ctx = new FakeAudioContext()
+    ctx.state = 'interrupted' as AudioContextState
+    sharedOn(ctx).prime()
     expect(ctx.resumeCalls).toBe(1)
   })
 
   it('returns the context once running', () => {
     const ctx = new FakeAudioContext()
-    const shared = new SharedAudioContext(() => asContext(ctx))
-    expect(shared.running()).toBe(asContext(ctx))
+    expect(sharedOn(ctx).running()).toBe(asContext(ctx))
+  })
+})
+
+describe('whenRunning', () => {
+  it('runs at once on a running context', () => {
+    const ctx = new FakeAudioContext()
+    const ran: unknown[] = []
+    sharedOn(ctx).whenRunning((c) => ran.push(c))
+    expect(ran).toEqual([ctx])
+  })
+
+  it('waits for the unlock, then runs each callback once, in order', () => {
+    const ctx = new FakeAudioContext()
+    ctx.state = 'suspended'
+    const shared = sharedOn(ctx)
+    const ran: string[] = []
+    shared.whenRunning(() => ran.push('a'))
+    shared.whenRunning(() => ran.push('b'))
+    expect(ran).toEqual([])
+    ctx.unlock()
+    expect(ran).toEqual(['a', 'b'])
+    ctx.onstatechange?.()
+    expect(ran).toEqual(['a', 'b'])
   })
 })
 
@@ -58,7 +76,7 @@ describe('primeOnFirstGesture', () => {
   it('primes on the first gesture and cleans its listeners up', () => {
     const ctx = new FakeAudioContext()
     ctx.state = 'suspended'
-    const shared = new SharedAudioContext(() => asContext(ctx))
+    const shared = sharedOn(ctx)
     const listeners = new Map<string, EventListener>()
     const target = {
       addEventListener: (type: string, fn: EventListener) => {

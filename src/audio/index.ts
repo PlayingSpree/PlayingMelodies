@@ -1,4 +1,4 @@
-// Web Audio (DESIGN.md §8): one shared context for the test-note synth and,
-// later, the drone.
+// Web Audio (DESIGN.md §8): the Sound interface over one shared context, with
+// the drone and the test-note piano behind it.
 export * from './context'
-export * from './piano'
+export * from './sound'
