@@ -13,9 +13,10 @@ but no MIDI — it targets phone browsers, **iPhone Safari first-class**, as an
 installable offline PWA.
 
 Status: spec and scaffold deployed (a placeholder screen); the pure domain core
-(`theory/`, `practice/`, `storage/`) is built and tested on `dev`, with no screens
-yet. Next up is the session runner (tonic changes, timing, feedback sequencing,
-active time), which sits between the core and the store.
+(`theory/`, `practice/`, `storage/`) and the session runner (`practice/session.ts`,
+a pure state machine that emits audio and timer effects) are built and tested on
+`dev`, with no screens yet. Next up is the audio interface (drone voice, cue
+playback), then the store that drives the runner, then the screens.
 
 ## DESIGN.md — the spec
 
