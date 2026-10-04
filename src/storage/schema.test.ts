@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SETTINGS, EMPTY_DEGREE_STATS } from '../practice'
+import {
+  DEFAULT_SESSION_OPTIONS,
+  DEFAULT_SETTINGS,
+  EMPTY_DEGREE_STATS,
+} from '../practice'
 import {
   defaultState,
   sanitizeConfusions,
@@ -34,6 +38,11 @@ describe('sanitizeState', () => {
       },
       dailyRecords: {
         '2026-10-04': { date: '2026-10-04', activeMinutes: 4.5 },
+      },
+      lastOptions: {
+        ...DEFAULT_SESSION_OPTIONS,
+        mode: 'speed',
+        tonicLock: 7,
       },
     }
     expect(sanitizeState(JSON.parse(JSON.stringify(state)))).toEqual(state)

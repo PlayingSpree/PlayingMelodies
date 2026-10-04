@@ -7,12 +7,14 @@
 import {
   CONFUSION_LOG_SIZE,
   DATE_KEY_PATTERN,
+  DEFAULT_SESSION_OPTIONS,
   DEFAULT_SETTINGS,
   emptyStatsMap,
   freshProgress,
   MELODY_WINDOW,
   OUTCOME_WINDOW,
   PASS_WINDOW,
+  sanitizeSessionOptions,
   sanitizeSettings,
   SPEED_LIMIT_MS,
   SPEED_WINDOW,
@@ -22,6 +24,7 @@ import {
   type DegreeStats,
   type DegreeStatsMap,
   type PresetProgress,
+  type SessionOptions,
   type Settings,
 } from '../practice'
 import {
@@ -47,6 +50,8 @@ export interface PersistedState {
   // Absent means the preset was never played: it opens fresh.
   presetProgress: Readonly<Partial<Record<PresetId, PresetProgress>>>
   dailyRecords: DailyRecords
+  // The session sheet's last choices, which it opens on (§7.2).
+  lastOptions: SessionOptions
 }
 
 export function defaultState(): PersistedState {
@@ -57,6 +62,7 @@ export function defaultState(): PersistedState {
     confusions: [],
     presetProgress: {},
     dailyRecords: {},
+    lastOptions: DEFAULT_SESSION_OPTIONS,
   }
 }
 
@@ -198,5 +204,6 @@ export function sanitizeState(raw: Record<string, unknown>): PersistedState {
     confusions: sanitizeConfusions(raw.confusions),
     presetProgress: sanitizePresetProgressMap(raw.presetProgress),
     dailyRecords: sanitizeDailyRecords(raw.dailyRecords),
+    lastOptions: sanitizeSessionOptions(raw.lastOptions),
   }
 }

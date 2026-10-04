@@ -10,6 +10,12 @@ produced it.
 
 ---
 
+## 0.4.0 — 2026-10-04
+
+**The session sheet remembers its choices across reloads.** The last session's
+mode, length, tonic lock, change interval, melody length and tempo are saved,
+shared by all presets, and travel in an export (§7.2, §8).
+
 ## 0.3.0 — 2026-10-04
 
 **Settings gets a test sound.** The drone with a few degrees over it plays until

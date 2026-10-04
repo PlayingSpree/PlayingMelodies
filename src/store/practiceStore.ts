@@ -11,7 +11,6 @@ import { sound as appSound, type Sound } from '../audio'
 import {
   addActiveMinutes,
   advance,
-  DEFAULT_SESSION_OPTIONS,
   endSession,
   freshProgress,
   localDateKey,
@@ -41,7 +40,7 @@ export interface PracticeStoreState {
   records: PracticeRecords
   // The running session, or a finished one while its Report is up.
   session: SessionState | null
-  // The session sheet's last choices; in memory only for now.
+  // The session sheet's last choices, saved with each start.
   lastOptions: SessionOptions
 
   // Must be called synchronously from the Start tap's handler: starting the
@@ -58,8 +57,8 @@ export interface PracticeStoreState {
   // Settings (§7.5), offered from Home only, never mid-session. A reset opens
   // the preset fresh; the shared stats stay (§4, §5).
   resetPreset(presetId: PresetId): void
-  // Replaces everything stored with an imported backup. The settings store
-  // must reload after it.
+  // Replaces everything stored with an imported backup, the session sheet's
+  // last choices included. The settings store must reload after it.
   importState(state: PersistedState): void
 }
 
@@ -176,7 +175,7 @@ export function createPracticeStore({
     return {
       records: recordsOf(storage.state),
       session: null,
-      lastOptions: DEFAULT_SESSION_OPTIONS,
+      lastOptions: storage.state.lastOptions,
 
       start(presetId, options) {
         clearTimers()
@@ -195,6 +194,7 @@ export function createPracticeStore({
           rng,
         )
         set({ session: state, lastOptions: options })
+        storage.update((stored) => ({ ...stored, lastOptions: options }))
         carryOut(effects)
       },
 
@@ -230,7 +230,7 @@ export function createPracticeStore({
 
       importState(state) {
         storage.update(() => state)
-        set({ records: recordsOf(storage.state) })
+        set({ records: recordsOf(state), lastOptions: state.lastOptions })
       },
     }
   })

@@ -100,10 +100,18 @@ describe('practiceStore', () => {
     expect(cue).toMatchObject({ notes: [{ position: t.prompt()[0] }] })
   })
 
-  it('remembers the options it was started with', () => {
+  it('remembers the options it was started with, across reloads', () => {
     const t = setup()
     t.start({ tempo: 'fast' })
     expect(t.store.getState().lastOptions.tempo).toBe('fast')
+    expect(t.storage.state.lastOptions.tempo).toBe('fast')
+
+    const reloaded = createPracticeStore({
+      storage: t.storage,
+      sound: recordingSound(),
+      settings: () => DEFAULT_SETTINGS,
+    })
+    expect(reloaded.getState().lastOptions.tempo).toBe('fast')
   })
 
   it('a right answer is persisted, then the next prompt follows', () => {
@@ -317,11 +325,13 @@ describe('practiceStore', () => {
     const imported = {
       ...defaultState(),
       presetProgress: { combined: allPassed('combined') },
+      lastOptions: { ...DEFAULT_SESSION_OPTIONS, mode: 'melody' as const },
     }
     t.store.getState().importState(imported)
     expect(t.storage.state).toEqual(imported)
     expect(t.store.getState().records.presetProgress).toEqual({
       combined: allPassed('combined'),
     })
+    expect(t.store.getState().lastOptions.mode).toBe('melody')
   })
 })

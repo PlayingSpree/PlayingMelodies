@@ -261,7 +261,9 @@ for a phone in portrait, one-thumb reachable.
 Mode (Notes / Speed / Melody — each shown locked until it opens), **length**
 (10 / 20 / 40 prompts or 3 / 5 / 10 minutes, default 20 prompts — a melody counts
 as one prompt), tonic lock, tonic change every X, and for Melody its length and
-tempo.
+tempo. It opens on the choices the last session started with, saved across
+reloads and shared by all presets; a remembered mode that isn't open in this
+preset falls back to Notes.
 
 ### 7.3 Stage and the answer pad
 
@@ -312,8 +314,8 @@ rest.
 **Persisted shapes:** a per-degree stat record (Notes outcome window, Speed time
 window), the confusion log of (played, tapped) pairs, a per-preset progress record
 (unlocked count, a 5-answer pass window per degree, passed degrees, melody
-outcome window), daily records (date, active minutes) and settings.
-Schema-versioned from the start.
+outcome window), daily records (date, active minutes), settings and the session
+sheet's last choices. Schema-versioned from the start.
 
 ---
 
