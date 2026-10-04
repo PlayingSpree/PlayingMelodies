@@ -58,7 +58,7 @@ export function Pad({
             onClick={() => onTap(degree)}
             aria-label={`Degree ${degreeLabel(degree)}`}
             className={cx(
-              'rounded-2xl border-2 text-2xl font-extrabold transition-[transform,box-shadow] active:translate-y-[2px]',
+              'rounded-2xl border-2 text-2xl font-extrabold transition-transform active:translate-y-[2px]',
               lit
                 ? 'z-10 scale-110 shadow-glow ring-4 ring-ink'
                 : 'shadow-hard-sm',

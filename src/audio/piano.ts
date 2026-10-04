@@ -23,6 +23,8 @@ const PEAK = 0.25
 const SUSTAIN_LEVEL = 0.25 // fraction of peak the note decays toward
 const DECAY_TIME_CONSTANT = 0.4
 const RELEASE_SECONDS = 0.25
+// How fast silence() fades a note out.
+const CUT_SECONDS = 0.06
 const MASTER_LEVEL = 0.5
 
 // A simple piano-ish patch: fundamental (triangle) plus two upper partials
@@ -43,9 +45,13 @@ export function frequencyOf(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12)
 }
 
+// Each voice runs envelope → cut → master. The envelope shapes the note; the
+// cut stays at 1 until silence() fades it out. Cutting a note by rescheduling
+// its envelope instead would pop on iOS Safari, which can jump the gain when
+// automation in progress is cancelled.
 interface Voice {
   oscillators: OscillatorNode[]
-  envelope: GainNode
+  cut: GainNode
   endsAt: number // context time its release is over
 }
 
@@ -100,13 +106,13 @@ export class Piano {
     const ctx = this.shared.running()
     if (ctx === null) return
     const now = ctx.currentTime
+    const end = now + CUT_SECONDS
     for (const voice of this.voices) {
-      // Drop the rest of the envelope and glide from wherever it is now to
-      // silence. A note that hasn't started is stopped before its start, so
-      // it never sounds at all.
-      voice.envelope.gain.cancelScheduledValues(now)
-      voice.envelope.gain.setTargetAtTime(0, now, RELEASE_SECONDS / 5)
-      for (const osc of voice.oscillators) osc.stop(now + RELEASE_SECONDS)
+      // Fade from wherever the envelope is to silence, then stop. A note
+      // that hasn't started is stopped before its start, so it never sounds.
+      voice.cut.gain.setValueAtTime(1, now)
+      voice.cut.gain.linearRampToValueAtTime(0, end)
+      for (const osc of voice.oscillators) osc.stop(end)
     }
     this.voices = []
   }
@@ -129,7 +135,10 @@ export class Piano {
     )
     // Five time constants is ~-43 dB: silent by the oscillators' stop.
     envelope.gain.setTargetAtTime(0, end, RELEASE_SECONDS / 5)
-    envelope.connect(this.masterGain(ctx))
+    const cut = ctx.createGain()
+    cut.gain.value = 1
+    envelope.connect(cut)
+    cut.connect(this.masterGain(ctx))
 
     const frequency = frequencyOf(midi)
     const oscillators = HARMONICS.map(({ multiple, type, gain }) => {
@@ -144,6 +153,6 @@ export class Piano {
       osc.stop(end + RELEASE_SECONDS)
       return osc
     })
-    this.voices.push({ oscillators, envelope, endsAt: end + RELEASE_SECONDS })
+    this.voices.push({ oscillators, cut, endsAt: end + RELEASE_SECONDS })
   }
 }

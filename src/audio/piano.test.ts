@@ -74,6 +74,27 @@ describe('Piano', () => {
     expect(late.stoppedAt.at(-1)!).toBeLessThan(late.startedAt[0]!)
   })
 
+  it('silence fades each note to 0 without rescheduling its envelope', () => {
+    const ctx = new FakeAudioContext()
+    const piano = pianoOn(ctx)
+    piano.play([{ midi: 60, atMs: 0, durationMs: 1000 }])
+    ctx.currentTime += 0.5
+    piano.silence()
+    const envelope = ctx.gains.find((g) => g.gain.last('target'))!
+    expect(envelope.gain.last('cancel')).toBeUndefined()
+    const cut = ctx.gains.find((g) => envelope.outputs.includes(g))!
+    expect(cut.gain.events[0]).toEqual({
+      kind: 'set',
+      value: 1,
+      at: ctx.currentTime,
+    })
+    const fade = cut.gain.last('linear')!
+    expect(fade.value).toBe(0)
+    for (const osc of ctx.oscillators) {
+      expect(osc.stoppedAt.at(-1)).toBeGreaterThanOrEqual(fade.at)
+    }
+  })
+
   it('silence leaves notes that already ended alone', () => {
     const ctx = new FakeAudioContext()
     const piano = pianoOn(ctx)
