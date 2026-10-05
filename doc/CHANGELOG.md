@@ -10,6 +10,15 @@ produced it.
 
 ---
 
+## 0.9.0 — 2026-10-05
+
+**Combined is Chromatic, and presets start at different counts.** The all-12
+preset is renamed Chromatic, its id included: progress saved under Combined is
+dropped on load and Chromatic starts fresh, while the shared degree stats stay.
+Each preset now has its own starting count: Major
+opens 2 degrees as before, Minor 3 (1 5 ♭3) and Chromatic 4 (1 5 3 ♭3). Saved
+progress below the new count is raised to it on load (§1, §4).
+
 ## 0.8.0 — 2026-10-05
 
 **Home has a tab per mode, each with preset grades.** Notes / Speed / Melody tabs

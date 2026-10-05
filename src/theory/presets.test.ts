@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEGREES, degreeLabel } from './degrees'
 import { getPreset, isPresetId, PRESETS } from './presets'
 
-function labels(id: 'major' | 'minor' | 'combined'): string {
+function labels(id: 'major' | 'minor' | 'chromatic'): string {
   return getPreset(id).order.map(degreeLabel).join(' ')
 }
 
@@ -10,7 +10,7 @@ describe('PRESETS', () => {
   it('match the §4 unlock orders', () => {
     expect(labels('major')).toBe('1 5 3 4 6 2 7')
     expect(labels('minor')).toBe('1 5 ♭3 4 ♭6 2 ♭7')
-    expect(labels('combined')).toBe('1 5 3 ♭3 7 ♭7 6 ♭6 4 2 ♭2 ♯4')
+    expect(labels('chromatic')).toBe('1 5 3 ♭3 7 ♭7 6 ♭6 4 2 ♭2 ♯4')
   })
 
   it('all open on 1 and 5', () => {
@@ -25,8 +25,12 @@ describe('PRESETS', () => {
     }
   })
 
-  it('give Combined all 12 degrees', () => {
-    expect([...getPreset('combined').order].sort((a, b) => a - b)).toEqual(
+  it('start Major on 2, Minor on 3 and Chromatic on 4', () => {
+    expect(PRESETS.map((preset) => preset.startUnlocked)).toEqual([2, 3, 4])
+  })
+
+  it('give Chromatic all 12 degrees', () => {
+    expect([...getPreset('chromatic').order].sort((a, b) => a - b)).toEqual(
       DEGREES,
     )
   })
@@ -35,7 +39,7 @@ describe('PRESETS', () => {
 describe('isPresetId', () => {
   it('accepts the built-in ids only', () => {
     expect(isPresetId('major')).toBe(true)
-    expect(isPresetId('combined')).toBe(true)
+    expect(isPresetId('chromatic')).toBe(true)
     expect(isPresetId('dorian')).toBe(false)
     expect(isPresetId(1)).toBe(false)
   })

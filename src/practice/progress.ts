@@ -1,8 +1,8 @@
 // Per-preset unlock progress (DESIGN.md §4) and the mode gates it drives
-// (§6). A fresh preset opens its first 2 degrees; once every open degree has
+// (§6). A fresh preset opens its starting degrees; once every open degree has
 // passed, the next one opens. Passing reads the preset's *own* window of
 // Notes answers, not the shared stats (§5), so a degree passed in Major still
-// has to be passed again in Combined. Pure TS.
+// has to be passed again in Chromatic. Pure TS.
 
 import type { Degree, Preset } from '../theory'
 import {
@@ -16,8 +16,6 @@ import {
   type Grade,
   type Star,
 } from './stats'
-
-export const INITIAL_UNLOCKED = 2
 
 // A degree passes at PASS_REQUIRED right among its last PASS_WINDOW Notes
 // answers in the preset — a full window, so 4 straight right isn't enough.
@@ -43,7 +41,7 @@ export interface PresetProgress {
 
 export function freshProgress(preset: Preset): PresetProgress {
   return {
-    unlockedCount: Math.min(INITIAL_UNLOCKED, preset.order.length),
+    unlockedCount: Math.min(preset.startUnlocked, preset.order.length),
     passWindows: {},
     passed: [],
     melodyOutcomes: [],

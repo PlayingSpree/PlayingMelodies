@@ -17,8 +17,9 @@ sequencing is intentionally left outside this document.
 - **Three session modes:** **Notes** (one degree at a time — where degrees are
   learned and unlocked), **Speed** (the same against a fixed 5 s limit, rated in
   stars), and **Melody** (2–6 degrees in a row, entered in order) (§6).
-- **Presets:** Major, Minor and Combined (all 12 degrees), each unlocking
-  flashcard-style — 2 degrees open, 1 more each time everything open has passed (§4).
+- **Presets:** Major, Minor and Chromatic (all 12 degrees), each unlocking
+  flashcard-style — a few degrees open, 1 more each time everything open has
+  passed (§4).
 - **Stats are per degree**, independent of tonic and octave; unlock progress is per
   preset (§5).
 - Client-side only: an installable, offline PWA persisting to `localStorage`, with
@@ -126,23 +127,29 @@ ignore it (§5).
 
 ## 4. Presets & Unlocking
 
-Three built-in presets, each an **ordered** degree list. The order is the unlock
-order and is stored as data, so re-ordering is a one-line edit.
+Three built-in presets, each an **ordered** degree list with a starting count.
+The order is the unlock order; both are stored as data, so changing either is a
+one-line edit.
 
-| Preset   | Unlock order                                    |
-|----------|-------------------------------------------------|
-| Major    | 1 5 3 4 6 2 7                                   |
-| Minor    | 1 5 ♭3 4 ♭6 2 ♭7                                |
-| Combined | 1 5 3 ♭3 7 ♭7 6 ♭6 4 2 ♭2 ♯4                    |
+| Preset    | Unlock order                 | Starts with |
+|-----------|------------------------------|-------------|
+| Major     | 1 5 3 4 6 2 7                | 2           |
+| Minor     | 1 5 ♭3 4 ♭6 2 ♭7             | 3           |
+| Chromatic | 1 5 3 ♭3 7 ♭7 6 ♭6 4 2 ♭2 ♯4 | 4           |
 
 Every preset opens on 1 and 5, the degrees that merge with the drone; each later
-degree adds tension. Minor mirrors Major's shape. Combined is all 12 — not just
+degree adds tension. Minor mirrors Major's shape. Chromatic is all 12 — not just
 Major ∪ Minor, which would leave ♭2 and ♯4 in no preset at all — and introduces
 each major/minor partner right after its twin, so the contrast is drilled as soon
 as it exists.
 
+Only Major starts on the bare 1 and 5. Minor starts with ♭3 open too, so its first
+session already holds the note that makes it minor rather than a copy of Major's
+first session; Chromatic starts with 3 and ♭3, the contrast it exists to drill.
+
 **Unlocking** (PlayingChord §5.1's flashcard progression, re-sized):
-- A fresh preset starts with its **first 2** degrees unlocked.
+- A fresh preset starts with its **starting count** of degrees unlocked. Raising
+  a count lifts saved progress to it on load; nothing has to be migrated.
 - Once **every** unlocked degree has passed, the **next 1** unlocks, until the
   whole preset is open.
 - A degree **passes** when **4 of its last 5** Notes answers *in that preset* are
@@ -153,7 +160,7 @@ as it exists.
 - Passing is a **latch**: a degree that later slips stays passed and its unlocks
   stay open; the live grade is shown elsewhere.
 - **Progress is per preset.** Telling 3 from 4 and 5 is easier than telling it from
-  ♭3 too, so a pass in Major proves nothing about Combined. Stats, by contrast, are
+  ♭3 too, so a pass in Major proves nothing about Chromatic. Stats, by contrast, are
   shared (§5).
 - Only **Notes** answers count toward passing — not Speed, not Melody (§6).
 - Progress can be reset per preset in Settings.
@@ -173,7 +180,7 @@ Per degree:
   from accuracy over that window: **A ≥ 90 %, B ≥ 80 %, C ≥ 70 %, D ≥ 60 %, F
   below**, shown as "—" until 5 answers exist. Passing doesn't read this window:
   it reads the preset's own (§4), or answers given in Major would pass a degree
-  the moment Combined unlocked it.
+  the moment Chromatic unlocked it.
 - **Speed times** — the last 10 Speed-mode times, a miss or timeout counted as the
   full 5 s limit, so a fast wrong tap can't earn anything. The **star** is from their
   median: **gold < 1 s, silver < 2 s, bronze < 3 s**, none from 3 s up, and none

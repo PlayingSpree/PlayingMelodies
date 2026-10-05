@@ -384,13 +384,13 @@ describe('practiceStore', () => {
     const t = setup(allPassed('major'))
     const imported = {
       ...defaultState(),
-      presetProgress: { combined: allPassed('combined') },
+      presetProgress: { chromatic: allPassed('chromatic') },
       lastOptions: { ...DEFAULT_SESSION_OPTIONS, mode: 'melody' as const },
     }
     t.store.getState().importState(imported)
     expect(t.storage.state).toEqual(imported)
     expect(t.store.getState().records.presetProgress).toEqual({
-      combined: allPassed('combined'),
+      chromatic: allPassed('chromatic'),
     })
     expect(t.store.getState().lastOptions.mode).toBe('melody')
   })

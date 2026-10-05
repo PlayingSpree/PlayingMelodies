@@ -10,6 +10,7 @@ import {
   sanitizeDailyRecords,
   sanitizeDegreeStatsMap,
   sanitizePresetProgress,
+  sanitizePresetProgressMap,
   sanitizeState,
   SCHEMA_VERSION,
 } from './schema'
@@ -98,6 +99,27 @@ describe('sanitizePresetProgress', () => {
     expect(
       sanitizePresetProgress('major', { unlockedCount: 40 }).unlockedCount,
     ).toBe(7)
+  })
+
+  it("raises a save from before a preset's starting count grew", () => {
+    // Minor opened only 2 degrees before spec 0.9.0, as did Combined, now
+    // Chromatic.
+    const minor = sanitizePresetProgress('minor', {
+      unlockedCount: 2,
+      passed: [0, 7],
+    })
+    expect(minor.unlockedCount).toBe(3)
+    expect(minor.passed).toEqual([0, 7])
+    expect(
+      sanitizePresetProgress('chromatic', { unlockedCount: 2 }).unlockedCount,
+    ).toBe(4)
+  })
+
+  it('drops progress saved under an old preset id', () => {
+    // Chromatic was Combined, id and all, before spec 0.9.0.
+    expect(
+      sanitizePresetProgressMap({ combined: { unlockedCount: 6 } }),
+    ).toEqual({})
   })
 
   it('keeps passes and pass windows only for open degrees', () => {

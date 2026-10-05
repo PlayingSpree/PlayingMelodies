@@ -370,7 +370,7 @@ function ResetSection() {
   return (
     <Section label="Reset progress">
       <p className="text-sm text-ink-soft">
-        A reset relocks a preset to its first two degrees. Grades, stars and
+        A reset relocks a preset to its starting degrees. Grades, stars and
         daily time are shared by every preset and stay.
       </p>
       {PRESETS.map((preset) => (

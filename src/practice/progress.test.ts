@@ -60,8 +60,14 @@ describe('passesWindow', () => {
 })
 
 describe('freshProgress', () => {
-  it('opens the first 2 degrees', () => {
+  it("opens the preset's starting degrees", () => {
     expect(unlockedDegrees(major, freshProgress(major))).toEqual([0, 7])
+    const minor = getPreset('minor')
+    expect(unlockedDegrees(minor, freshProgress(minor))).toEqual([0, 7, 3])
+    const chromatic = getPreset('chromatic')
+    expect(unlockedDegrees(chromatic, freshProgress(chromatic))).toEqual([
+      0, 7, 4, 3,
+    ])
   })
 })
 
