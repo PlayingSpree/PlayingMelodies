@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { degreeAt, getPreset, type Degree } from '../theory'
-import { RIGHT_FEEDBACK_MS } from './cues'
+import { RIGHT_FEEDBACK_MS, SILENT_MISS_MS, type Cue } from './cues'
 import type { Rng } from './dealer'
 import type { PracticeSlice } from './grading'
 import { freshProgress, type PresetProgress } from './progress'
@@ -19,6 +19,7 @@ import {
   type SessionStep,
 } from './session'
 import { DEFAULT_SESSION_OPTIONS, type SessionOptions } from './sessionOptions'
+import type { FeedbackSound } from './settings'
 import { emptyStatsMap, SPEED_LIMIT_MS } from './stats'
 import { tonicMidi } from './tonic'
 
@@ -53,12 +54,14 @@ function start(
   options: Partial<SessionOptions> = {},
   practice = practiceWith(),
   seed = 1,
+  feedbackSound: FeedbackSound = 'misses',
 ): SessionStep {
   return startSession(
     {
       preset: MAJOR,
       options: { ...DEFAULT_SESSION_OPTIONS, ...options },
       register: 1,
+      feedbackSound,
     },
     practice,
     0,
@@ -71,8 +74,13 @@ function firstPrompt(
   options: Partial<SessionOptions> = {},
   practice = practiceWith(),
   seed = 1,
+  feedbackSound: FeedbackSound = 'misses',
 ): SessionStep {
-  return advance(start(options, practice, seed).state, SETTLE_MS, seeded(seed))
+  return advance(
+    start(options, practice, seed, feedbackSound).state,
+    SETTLE_MS,
+    seeded(seed),
+  )
 }
 
 function prompt(state: SessionState): number[] {
@@ -86,6 +94,12 @@ function playedDegree(state: SessionState): Degree {
 
 function wrongDegree(state: SessionState): Degree {
   return playedDegree(state) === 0 ? 7 : 0
+}
+
+// The feedback cue an answer plays.
+function cueOf(step: SessionStep): Cue | undefined {
+  const play = step.effects.find((effect) => effect.kind === 'play')
+  return play?.kind === 'play' ? play.cue : undefined
 }
 
 function wakes(effects: readonly SessionEffect[]) {
@@ -369,6 +383,57 @@ describe('Melody', () => {
   it('does nothing on undo with no slots filled', () => {
     const { state } = firstPrompt(options, ALL_PASSED)
     expect(undo(state, 3000).state.phase).toEqual(state.phase)
+  })
+})
+
+describe('feedback notes setting', () => {
+  const melody: Partial<SessionOptions> = { mode: 'melody', melodyLength: 3 }
+
+  // Answers the open melody prompt, every slot right or every slot wrong.
+  function answerMelody(state: SessionState, right: boolean): SessionStep {
+    let step: SessionStep = { state, effects: [] }
+    for (const position of prompt(state)) {
+      const degree = degreeAt(position)
+      step = tap(step.state, right ? degree : degree === 6 ? 1 : 6, 3000)
+    }
+    return step
+  }
+
+  it('plays the correct note resolving after a right answer on every answer', () => {
+    const { state } = firstPrompt({}, practiceWith(), 1, 'all')
+    const step = tap(state, playedDegree(state), 3000)
+    expect(cueOf(step)?.notes[0]?.position).toBe(prompt(state)[0])
+    expect(wakes(step.effects)).toEqual([
+      { kind: 'wake', call: 'advance', inMs: cueOf(step)?.lengthMs },
+    ])
+  })
+
+  it('replays a clean melody on every answer, but not on misses only', () => {
+    const all = firstPrompt(melody, ALL_PASSED, 1, 'all').state
+    expect(cueOf(answerMelody(all, true))?.notes).toHaveLength(3)
+    const misses = firstPrompt(melody, ALL_PASSED, 1, 'misses').state
+    expect(cueOf(answerMelody(misses, true))).toEqual({
+      notes: [],
+      lengthMs: RIGHT_FEEDBACK_MS,
+    })
+    expect(cueOf(answerMelody(misses, false))?.notes.length).toBeGreaterThan(3)
+  })
+
+  it('plays nothing on never, and holds a miss longer', () => {
+    const { state } = firstPrompt({}, practiceWith(), 1, 'never')
+    expect(cueOf(tap(state, playedDegree(state), 3000))).toEqual({
+      notes: [],
+      lengthMs: RIGHT_FEEDBACK_MS,
+    })
+    expect(cueOf(tap(state, wrongDegree(state), 3000))).toEqual({
+      notes: [],
+      lengthMs: SILENT_MISS_MS,
+    })
+    const tune = firstPrompt(melody, ALL_PASSED, 1, 'never').state
+    expect(cueOf(answerMelody(tune, false))).toEqual({
+      notes: [],
+      lengthMs: SILENT_MISS_MS,
+    })
   })
 })
 

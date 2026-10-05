@@ -18,9 +18,9 @@ import type { RegisterOctaves } from '../theory'
 import { IDLE_CLOCK, touchActivity, type ActivityClock } from './activeTime'
 import {
   melodyFeedbackCue,
+  noteFeedbackCue,
   promptCue,
-  rightCue,
-  wrongCue,
+  silentCue,
   type Cue,
 } from './cues'
 import { dealDegree, placeDegree, type Rng } from './dealer'
@@ -28,6 +28,7 @@ import { gradeAnswer, type Answer, type PracticeSlice } from './grading'
 import { generateMelody } from './melody'
 import { dealableDegrees, isModeOpen } from './progress'
 import type { PitchClass, SessionOptions } from './sessionOptions'
+import type { FeedbackSound } from './settings'
 import { SPEED_LIMIT_MS } from './stats'
 import { pickTonic, tonicMidi } from './tonic'
 
@@ -40,6 +41,7 @@ export interface SessionSetup {
   preset: Preset
   options: SessionOptions
   register: RegisterOctaves
+  feedbackSound: FeedbackSound
 }
 
 // One graded prompt, for the Report.
@@ -275,12 +277,13 @@ function grade(
     slots: result.slots,
     timeMs,
   }
+  const { feedbackSound } = state.setup
   const cue =
-    options.mode === 'melody'
-      ? melodyFeedbackCue(prompt, tapped, options.tempo)
-      : result.correct
-        ? rightCue()
-        : wrongCue(played, tapped[0] ?? null)
+    feedbackSound === 'never' || (feedbackSound === 'misses' && result.correct)
+      ? silentCue(result.correct)
+      : options.mode === 'melody'
+        ? melodyFeedbackCue(prompt, tapped, options.tempo)
+        : noteFeedbackCue(played, tapped[0] ?? null)
 
   const next: SessionState = {
     ...state,

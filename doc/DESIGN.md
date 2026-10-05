@@ -4,7 +4,7 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.2.1** (2026-10-04). Revision history lives in
+Spec version: **0.7.0** (2026-10-05). Revision history lives in
 [CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
 sequencing is intentionally left outside this document.
 
@@ -212,6 +212,10 @@ The core drill, and the only mode that unlocks anything. Deals the preset's
   The app plays the tapped note, a short silent pause so the two don't run
   together, then the correct note once, **resolving to the tonic** — the "where
   does it want to go" cue drone methods teach with — and then advances.
+- Which answers get those **feedback notes** is a setting (§7.5): misses only
+  (the default), every answer — a right answer then plays the correct note
+  resolving — or never. Silent feedback holds a miss ~2 s, long enough to find
+  the correct key on the pad.
 - While feedback plays, each note's pad key **lights up as it sounds**, so every
   sound can be matched to its key (§7.3). Prompts never light a key: that would
   give the answer away.
@@ -250,7 +254,9 @@ Opening at 3 rather than at a fully passed preset lets melodies start early.
   then — per-note checking would give away the rest of the melody.
 - **Feedback:** each slot is marked ✓ or ✗, the melody replays as played, and each
   wrong slot then plays tapped-versus-correct, with the same pause between them as
-  in Notes. The keys light as they sound, as in Notes.
+  in Notes. The keys light as they sound, as in Notes. The feedback-notes setting
+  applies per melody: on misses only, a clean melody gets its ✓s in silence; on
+  never, every melody does.
 - **Grading:** a melody is **clean** only if every note is right. The preset's
   **melody grade** is the share of clean melodies over its last 10, on the same
   letter bands as §5. Wrong notes feed the confusion log; nothing else (§5).
@@ -300,8 +306,9 @@ Melody) or stars earned (Speed); the goal line.
 
 ### 7.5 Settings
 
-Drone volume, note volume, register (1 / 2 / 3 octaves), daily goal minutes
-(default 10), JSON export/import, and reset progress per preset.
+Drone volume, note volume, feedback notes after every answer / misses only /
+never (§6.1, default misses only), register (1 / 2 / 3 octaves), daily goal
+minutes (default 10), JSON export/import, and reset progress per preset.
 
 - A **test sound** sets the volumes by ear: the drone with a few degrees taking
   turns over it, until it's stopped or Settings closes. The volumes are otherwise

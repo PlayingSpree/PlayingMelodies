@@ -10,6 +10,14 @@ produced it.
 
 ---
 
+## 0.7.0 — 2026-10-05
+
+**Feedback notes are a setting.** Settings chooses which answers play the feedback
+notes: misses only (the default), every answer — a right one plays the correct
+note resolving to the tonic — or never, where a miss stays on screen ~2 s instead.
+In Melody, a clean melody no longer replays unless every answer is chosen (§6.1,
+§6.3, §7.5).
+
 ## 0.6.0 — 2026-10-04
 
 **Clearer miss feedback.** The correct note plays once, after a short silent pause

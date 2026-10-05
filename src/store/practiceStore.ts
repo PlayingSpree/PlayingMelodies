@@ -214,8 +214,9 @@ export function createPracticeStore({
           confusions: records.confusions,
           progress: records.presetProgress[presetId] ?? freshProgress(preset),
         }
+        const { register, feedbackSound } = settings()
         const { state, effects } = startSession(
-          { preset, options, register: settings().register },
+          { preset, options, register, feedbackSound },
           practice,
           now(),
           rng,

@@ -13,6 +13,7 @@ describe('sanitizeSettings', () => {
       noteVolume: 1,
       register: 3,
       goalMinutes: 25,
+      feedbackSound: 'never',
     }
     expect(sanitizeSettings(settings)).toEqual(settings)
   })
@@ -24,7 +25,16 @@ describe('sanitizeSettings', () => {
         noteVolume: 0.3,
         register: 4,
         goalMinutes: 0,
+        feedbackSound: 'sometimes',
       }),
     ).toEqual({ ...DEFAULT_SETTINGS, noteVolume: 0.3 })
+  })
+
+  it('defaults a field older saves lack', () => {
+    const { feedbackSound: _, ...older } = DEFAULT_SETTINGS
+    expect(sanitizeSettings({ ...older, register: 2 })).toEqual({
+      ...DEFAULT_SETTINGS,
+      register: 2,
+    })
   })
 })

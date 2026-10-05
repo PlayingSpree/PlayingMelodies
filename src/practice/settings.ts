@@ -4,11 +4,21 @@
 import { isRegisterOctaves, type RegisterOctaves } from '../theory'
 import { DEFAULT_GOAL_MINUTES } from './daily'
 
+// Which answers the feedback notes play after (§7.5): every answer, misses
+// only, or none.
+export type FeedbackSound = 'all' | 'misses' | 'never'
+export const FEEDBACK_SOUNDS: readonly FeedbackSound[] = [
+  'all',
+  'misses',
+  'never',
+]
+
 export interface Settings {
   droneVolume: number // 0–1
   noteVolume: number // 0–1
   register: RegisterOctaves
   goalMinutes: number
+  feedbackSound: FeedbackSound
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -16,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   noteVolume: 0.8,
   register: 1,
   goalMinutes: DEFAULT_GOAL_MINUTES,
+  feedbackSound: 'misses',
 }
 
 export const MAX_GOAL_MINUTES = 240
@@ -35,6 +46,13 @@ function asGoalMinutes(value: unknown): number {
     : DEFAULT_SETTINGS.goalMinutes
 }
 
+function asFeedbackSound(value: unknown): FeedbackSound {
+  return (
+    FEEDBACK_SOUNDS.find((sound) => sound === value) ??
+    DEFAULT_SETTINGS.feedbackSound
+  )
+}
+
 // A field that is missing or out of range falls back to its default alone,
 // so one bad value never costs the player their other settings.
 export function sanitizeSettings(value: unknown): Settings {
@@ -49,5 +67,6 @@ export function sanitizeSettings(value: unknown): Settings {
       ? raw.register
       : DEFAULT_SETTINGS.register,
     goalMinutes: asGoalMinutes(raw.goalMinutes),
+    feedbackSound: asFeedbackSound(raw.feedbackSound),
   }
 }

@@ -10,6 +10,7 @@ import {
   type Cue,
   type PresetProgress,
   type SessionOptions,
+  type Settings,
 } from '../practice'
 import { defaultState } from '../storage'
 import { degreeAt, getPreset, type Degree, type PresetId } from '../theory'
@@ -35,7 +36,7 @@ function allPassed(id: PresetId): PresetProgress {
   }
 }
 
-function setup(progress?: PresetProgress) {
+function setup(progress?: PresetProgress, settings = DEFAULT_SETTINGS) {
   const storage = memoryStorage()
   if (progress) {
     storage.update((state) => ({
@@ -47,7 +48,7 @@ function setup(progress?: PresetProgress) {
   const store = createPracticeStore({
     storage,
     sound,
-    settings: () => DEFAULT_SETTINGS,
+    settings: () => settings,
     rng: seeded(),
   })
   const start = (options: Partial<SessionOptions> = {}) =>
@@ -133,6 +134,17 @@ describe('practiceStore', () => {
     vi.advanceTimersByTime(RIGHT_FEEDBACK_MS)
     expect(t.phase()?.kind).toBe('answering')
     expect(t.callsOf('play')).toHaveLength(3) // prompt, (silent) right, prompt
+  })
+
+  it('starts sessions with the feedback notes setting', () => {
+    const settings: Settings = { ...DEFAULT_SETTINGS, feedbackSound: 'all' }
+    const t = setup(undefined, settings)
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS)
+    const played = t.prompt()[0]
+    t.answerRight()
+    const [, , cue] = t.callsOf('play')[1]!
+    expect((cue as Cue).notes[0]?.position).toBe(played)
   })
 
   it('a wrong answer plays the feedback cue and logs the confusion', () => {

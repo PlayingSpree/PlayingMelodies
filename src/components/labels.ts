@@ -1,7 +1,14 @@
 // How ratings, modes and pitches read on screen (DESIGN.md §5, §7), in one
 // place so a grade can't be green on Home and red on the Report.
 
-import type { Grade, Mode, PitchClass, Star, Tempo } from '../practice'
+import type {
+  FeedbackSound,
+  Grade,
+  Mode,
+  PitchClass,
+  Star,
+  Tempo,
+} from '../practice'
 
 export const MODE_LABELS: Readonly<Record<Mode, string>> = {
   notes: 'Notes',
@@ -13,6 +20,12 @@ export const TEMPO_LABELS: Readonly<Record<Tempo, string>> = {
   slow: 'Slow',
   normal: 'Normal',
   fast: 'Fast',
+}
+
+export const FEEDBACK_SOUND_LABELS: Readonly<Record<FeedbackSound, string>> = {
+  all: 'Every answer',
+  misses: 'Misses only',
+  never: 'Never',
 }
 
 // The tonic lock is the one place a pitch is named (§3.2); spelled the way

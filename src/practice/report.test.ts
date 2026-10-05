@@ -45,6 +45,7 @@ function play(
       preset: MAJOR,
       options: { ...DEFAULT_SESSION_OPTIONS, ...options },
       register: 1,
+      feedbackSound: 'misses',
     },
     slice,
     t,

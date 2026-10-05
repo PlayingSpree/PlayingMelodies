@@ -21,11 +21,14 @@ export interface Cue {
 
 export const PROMPT_NOTE_MS = 1200
 
-// Right: a short confirmation, then on (§6.1).
+// Feedback with no notes (§6.1, §7.5): a short confirmation on a right
+// answer; a miss stays longer, so the correct key can be found on the pad.
 export const RIGHT_FEEDBACK_MS = 1000
+export const SILENT_MISS_MS = 2000
 
-// Wrong: the tapped note, a silent pause so it doesn't run into the answer,
-// then the correct note resolving to the tonic, which it holds (§6.1).
+// With notes: the tapped note on a miss, a silent pause so it doesn't run
+// into the answer, then the correct note resolving to the tonic, which it
+// holds (§6.1).
 export const FEEDBACK_NOTE_MS = 900
 export const TAPPED_PAUSE_MS = 700
 export const RESOLVE_STEP_MS = 900
@@ -74,18 +77,19 @@ export function promptCue(positions: readonly number[], tempo: Tempo): Cue {
   }
 }
 
-export function rightCue(): Cue {
-  return { notes: [], lengthMs: RIGHT_FEEDBACK_MS }
+export function silentCue(correct: boolean): Cue {
+  return { notes: [], lengthMs: correct ? RIGHT_FEEDBACK_MS : SILENT_MISS_MS }
 }
 
-// A miss in Notes or Speed (§6.1, §6.2): the tapped note — none for a Speed
-// timeout — then the correct note resolving.
-export function wrongCue(played: number, tapped: Degree | null): Cue {
+// An answer in Notes or Speed (§6.1, §6.2): on a miss the tapped note — none
+// for a Speed timeout — then the correct note resolving. A right answer
+// plays just the correct note resolving.
+export function noteFeedbackCue(played: number, tapped: Degree | null): Cue {
   const notes: CueNote[] = []
   let at = 0
   const note = (position: number, durationMs: number) =>
     notes.push({ position, atMs: at, durationMs })
-  if (tapped !== null) {
+  if (tapped !== null && tapped !== degreeAt(played)) {
     note(besideOf(played, tapped), FEEDBACK_NOTE_MS)
     at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
   }

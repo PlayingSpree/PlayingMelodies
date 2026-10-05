@@ -1,11 +1,12 @@
 // Settings (DESIGN.md §7.5): drone and note volume with a test sound to set
-// them by, register, the daily goal,
+// them by, which answers play feedback notes, register, the daily goal,
 // JSON export/import of everything stored, and reset progress per preset.
 // Reached from Home only, so nothing here runs mid-session.
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { sound } from '../audio'
 import {
+  FEEDBACK_SOUNDS,
   localDateKey,
   MAX_GOAL_MINUTES,
   promptCue,
@@ -24,6 +25,7 @@ import {
   type PersistedState,
 } from '../storage'
 import { PRESETS, REGISTER_OCTAVES, type Preset } from '../theory'
+import { FEEDBACK_SOUND_LABELS } from './labels'
 import { Card, Chip, RaisedButton, SectionLabel } from './ui'
 
 const CHIP = 'px-3 py-1.5 text-sm'
@@ -119,6 +121,7 @@ function useTestSound() {
 function SoundSection() {
   const drone = useSettings((s) => s.settings.droneVolume)
   const note = useSettings((s) => s.settings.noteVolume)
+  const feedback = useSettings((s) => s.settings.feedbackSound)
   const update = useSettings((s) => s.update)
   const { testing, toggle } = useTestSound()
   return (
@@ -140,6 +143,21 @@ function SoundSection() {
         value={note}
         onChange={(noteVolume) => update({ noteVolume })}
       />
+      <div className="flex flex-col gap-2">
+        <span className="font-semibold">Feedback notes after</span>
+        <div className="flex flex-wrap gap-2">
+          {FEEDBACK_SOUNDS.map((sound) => (
+            <Chip
+              key={sound}
+              className={CHIP}
+              selected={feedback === sound}
+              onClick={() => update({ feedbackSound: sound })}
+            >
+              {FEEDBACK_SOUND_LABELS[sound]}
+            </Chip>
+          ))}
+        </div>
+      </div>
     </Section>
   )
 }

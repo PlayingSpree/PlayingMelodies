@@ -6,11 +6,12 @@ import {
   melodyFeedbackCue,
   promptCue,
   resolveToTonic,
-  rightCue,
+  noteFeedbackCue,
   RIGHT_FEEDBACK_MS,
+  SILENT_MISS_MS,
+  silentCue,
   TAPPED_PAUSE_MS,
   TEMPO_STEP_MS,
-  wrongCue,
   type Cue,
 } from './cues'
 
@@ -57,36 +58,47 @@ describe('promptCue', () => {
   })
 })
 
-describe('rightCue', () => {
-  it('is a silent pause', () => {
-    expect(rightCue()).toEqual({ notes: [], lengthMs: RIGHT_FEEDBACK_MS })
+describe('silentCue', () => {
+  it('is a short pause after a right answer', () => {
+    expect(silentCue(true)).toEqual({ notes: [], lengthMs: RIGHT_FEEDBACK_MS })
+  })
+
+  it('holds a miss longer', () => {
+    expect(silentCue(false)).toEqual({ notes: [], lengthMs: SILENT_MISS_MS })
+    expect(SILENT_MISS_MS).toBeGreaterThan(RIGHT_FEEDBACK_MS)
   })
 })
 
-describe('wrongCue', () => {
+describe('noteFeedbackCue', () => {
   it('plays tapped, then correct resolving', () => {
-    expect(positions(wrongCue(9, 7))).toEqual([7, 9, 12])
+    expect(positions(noteFeedbackCue(9, 7))).toEqual([7, 9, 12])
   })
 
   it('pauses between the tapped note and the correct one', () => {
-    const [tapped, correct] = wrongCue(9, 7).notes
+    const [tapped, correct] = noteFeedbackCue(9, 7).notes
     expect((correct?.atMs ?? 0) - (tapped?.durationMs ?? 0)).toBe(
       TAPPED_PAUSE_MS,
     )
   })
 
   it('skips the tapped note for a timeout', () => {
-    const cue = wrongCue(16, null)
+    const cue = noteFeedbackCue(16, null)
     expect(positions(cue)).toEqual([16, 12])
     expect(cue.notes[0]?.atMs).toBe(0)
   })
 
+  it('plays just the correct note resolving for a right answer', () => {
+    const cue = noteFeedbackCue(16, 4)
+    expect(positions(cue)).toEqual([16, 12])
+    expect(cue).toEqual(noteFeedbackCue(16, null))
+  })
+
   it('holds the tonic instead of resolving it', () => {
-    expect(positions(wrongCue(12, 11))).toEqual([23, 12])
+    expect(positions(noteFeedbackCue(12, 11))).toEqual([23, 12])
   })
 
   it('runs past its last note', () => {
-    const cue = wrongCue(9, 7)
+    const cue = noteFeedbackCue(9, 7)
     const last = cue.notes.at(-1)
     expect(cue.lengthMs).toBeGreaterThan(
       (last?.atMs ?? 0) + (last?.durationMs ?? 0),
