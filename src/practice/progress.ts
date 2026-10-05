@@ -5,7 +5,17 @@
 // has to be passed again in Combined. Pure TS.
 
 import type { Degree, Preset } from '../theory'
-import { pushWindow, windowGrade, type Grade } from './stats'
+import {
+  averageGrade,
+  averageStar,
+  MIN_RATED_ANSWERS,
+  pushWindow,
+  starOf,
+  windowGrade,
+  type DegreeStatsMap,
+  type Grade,
+  type Star,
+} from './stats'
 
 export const INITIAL_UNLOCKED = 2
 
@@ -119,6 +129,34 @@ export function recordMelodyOutcome(
 
 export function melodyGrade(progress: PresetProgress): Grade | null {
   return windowGrade(progress.melodyOutcomes)
+}
+
+// The preset's Notes grade (§5): the grades of its open degrees, averaged and
+// rounded down. Ungraded degrees are left out, so it rates how well the open
+// degrees are known, not how far the preset has come. Null is "—".
+export function presetGrade(
+  preset: Preset,
+  progress: PresetProgress,
+  stats: DegreeStatsMap,
+): Grade | null {
+  const grades = unlockedDegrees(preset, progress)
+    .map((degree) => windowGrade(stats[degree].outcomes))
+    .filter((grade) => grade !== null)
+  return averageGrade(grades)
+}
+
+// The preset's Speed star (§5): its degrees' stars, averaged and rounded
+// down, over the degrees with enough times to be rated. Null is "—", nothing
+// rated yet; 'none' is rated, with no star.
+export function presetStar(
+  preset: Preset,
+  stats: DegreeStatsMap,
+): Star | 'none' | null {
+  const rated = preset.order
+    .map((degree) => stats[degree].speedTimesMs)
+    .filter((times) => times.length >= MIN_RATED_ANSWERS)
+  if (rated.length === 0) return null
+  return averageStar(rated.map(starOf)) ?? 'none'
 }
 
 export type Mode = 'notes' | 'speed' | 'melody'

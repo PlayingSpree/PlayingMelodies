@@ -84,6 +84,16 @@ export function windowGrade(outcomes: readonly boolean[]): Grade | null {
   return gradeOf(right / outcomes.length)
 }
 
+// A preset's grade averages its degrees' grades as points, A = 4 … F = 0,
+// and rounds down (§5). Null, for no grades at all, is "—".
+const GRADE_POINTS: readonly Grade[] = ['F', 'D', 'C', 'B', 'A']
+
+export function averageGrade(grades: readonly Grade[]): Grade | null {
+  if (grades.length === 0) return null
+  const points = grades.reduce((sum, g) => sum + GRADE_POINTS.indexOf(g), 0)
+  return GRADE_POINTS[Math.floor(points / grades.length)] ?? null
+}
+
 export type Star = 'gold' | 'silver' | 'bronze'
 
 export function median(values: readonly number[]): number | null {
@@ -103,4 +113,14 @@ export function starOf(speedTimesMs: readonly number[]): Star | null {
   if (time < 2000) return 'silver'
   if (time < 3000) return 'bronze'
   return null
+}
+
+// Stars average the same way, gold = 3 … no star = 0 (§5). Unlike a grade,
+// "no star" is itself a rating, so the caller passes only rated degrees.
+const STAR_POINTS: readonly (Star | null)[] = [null, 'bronze', 'silver', 'gold']
+
+export function averageStar(stars: readonly (Star | null)[]): Star | null {
+  if (stars.length === 0) return null
+  const points = stars.reduce((sum, s) => sum + STAR_POINTS.indexOf(s), 0)
+  return STAR_POINTS[Math.floor(points / stars.length)] ?? null
 }

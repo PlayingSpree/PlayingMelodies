@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  averageGrade,
+  averageStar,
   EMPTY_DEGREE_STATS,
   emptyStatsMap,
   gradeOf,
@@ -75,6 +77,19 @@ describe('windowGrade', () => {
   })
 })
 
+describe('averageGrade', () => {
+  it('averages the letters and rounds down', () => {
+    expect(averageGrade(['A', 'A', 'B'])).toBe('B')
+    expect(averageGrade(['A', 'C'])).toBe('B')
+    expect(averageGrade(['A', 'F'])).toBe('C')
+    expect(averageGrade(['D', 'F'])).toBe('F')
+  })
+
+  it('is "—" with no grades', () => {
+    expect(averageGrade([])).toBeNull()
+  })
+})
+
 describe('median', () => {
   it('handles odd, even and empty lists', () => {
     expect(median([3, 1, 2])).toBe(2)
@@ -93,6 +108,15 @@ describe('starOf', () => {
     expect(starOf([1000, 1500, 1500, 1500, 400])).toBe('silver')
     expect(starOf([2999, 2999, 2999, 100, 100])).toBe('bronze')
     expect(starOf([3000, 3000, 3000, 100, 100])).toBeNull()
+  })
+})
+
+describe('averageStar', () => {
+  it('averages the stars, no star as 0, and rounds down', () => {
+    expect(averageStar(['gold', 'gold', 'silver'])).toBe('silver')
+    expect(averageStar(['gold', 'bronze'])).toBe('silver')
+    expect(averageStar(['gold', null])).toBe('bronze')
+    expect(averageStar(['bronze', null])).toBeNull()
   })
 })
 

@@ -10,6 +10,16 @@ produced it.
 
 ---
 
+## 0.8.0 — 2026-10-05
+
+**Home has a tab per mode, each with preset grades.** Notes / Speed / Melody tabs
+list the presets with only that mode's ratings, and each card shows a preset
+grade: the unlocked degrees' letter grades averaged and rounded down, the rated
+degrees' stars averaged and rounded down, or the melody grade. A card whose mode
+is still locked says what opens it. The tab picks the session's mode, so the
+session sheet loses its mode picker; Home reopens on the last tab used (§5, §6,
+§7.1, §7.2, §8).
+
 ## 0.7.0 — 2026-10-05
 
 **Feedback notes are a setting.** Settings chooses which answers play the feedback

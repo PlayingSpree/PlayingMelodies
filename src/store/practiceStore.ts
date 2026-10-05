@@ -26,6 +26,7 @@ import {
   type SessionState,
   type SessionStep,
   type Cue,
+  type Mode,
   type Settings,
 } from '../practice'
 import { appStorage, type AppStorage, type PersistedState } from '../storage'
@@ -41,7 +42,8 @@ export interface PracticeStoreState {
   records: PracticeRecords
   // The running session, or a finished one while its Report is up.
   session: SessionState | null
-  // The session sheet's last choices, saved with each start.
+  // The session sheet's last choices, saved with each start. Its mode is also
+  // Home's open tab, saved as soon as the tab changes (§7.1).
   lastOptions: SessionOptions
   // The degree whose feedback note is sounding now, lit on the pad so each
   // sound can be matched to its key (§6.1). Prompts never light one.
@@ -50,6 +52,7 @@ export interface PracticeStoreState {
   // Must be called synchronously from the Start tap's handler: starting the
   // drone there is what unlocks audio on iOS (§2).
   start(presetId: PresetId, options: SessionOptions): void
+  chooseMode(mode: Mode): void
   tap(degree: Degree): void
   undo(): void
   replay(): void
@@ -224,6 +227,12 @@ export function createPracticeStore({
         set({ session: state, lastOptions: options, sounding: null })
         storage.update((stored) => ({ ...stored, lastOptions: options }))
         carryOut(effects, state.phase.kind)
+      },
+
+      chooseMode(mode) {
+        const lastOptions = { ...get().lastOptions, mode }
+        set({ lastOptions })
+        storage.update((stored) => ({ ...stored, lastOptions }))
       },
 
       tap(degree) {

@@ -185,6 +185,21 @@ Per degree:
   heard against *that* note, a different measurement from a lone note over the
   drone (§6.3).
 
+**Preset grades.** Each Home tab (§7.1) sums a preset up in one rating, on its
+mode's own scale:
+- **Notes** — the letter grades of the preset's *unlocked* degrees, averaged as
+  A = 4 … F = 0 and **rounded down**; degrees without a grade yet are left out,
+  and it reads "—" until one has one. It rates how well the open degrees are
+  known, not how far the preset has come — the card's passed count says that, and
+  counting locked degrees would hold a long preset at F for weeks.
+- **Speed** — the stars of the degrees with enough times to be rated, averaged as
+  gold = 3 … no star = 0, rounded down, and shown as a star — never a letter, for
+  the reason above. "—" until a degree is rated.
+- **Melody** — the preset's melody grade (§6.3) as it is.
+
+Rounding down keeps one weak degree from hiding behind the rest. These are
+summaries of the stats above, not new records: melody notes still rate no degree.
+
 **Confusions.** Every wrong answer, in any mode, is logged as a **(played, tapped)
 pair**. Hearing two degrees side by side is how they're told apart, so when the
 dealer weights a missed degree up, it weights the degree it was mistaken for up
@@ -197,7 +212,8 @@ toward recent misses and their confusion partners, never excluding any degree.
 
 ## 6. Session Modes
 
-A session is started from a preset card on Home (§7.1). Every mode runs over the
+A session is started from a preset card on Home, in the mode of the tab it sits
+in (§7.1). Every mode runs over the
 drone and ends in the Report (§7.4).
 
 ### 6.1 Notes
@@ -273,18 +289,27 @@ for a phone in portrait, one-thumb reachable.
 - **Update ready:** when a new version is waiting, a card above everything else
   offers a Reload (§2). Only Home shows it, so it never interrupts a session.
 - **Top:** the streak and today's active minutes against the daily goal.
-- **One card per preset**, showing unlock progress, a strip of its degrees' letter
-  grades, their stars once Speed is open, and the preset's melody grade once Melody
-  is open. Tapping a card opens its session sheet.
+- **A tab per mode** — Notes / Speed / Melody — each listing **one card per
+  preset**, in the same order in every tab, so a card never moves. A card shows
+  only its tab's mode, with the preset grade (§5) in its corner:
+  - **Notes:** the passed count and a strip of the degrees' letter grades, passed
+    ones tinted, locked ones locked.
+  - **Speed:** how many degrees have a star, and a strip of their stars.
+  - **Melody:** the clean melodies in the window, and the strip with only the
+    passed degrees lit — the ones melodies are made from.
+- Tapping a card opens its session sheet in the tab's mode. A card whose mode is
+  still locked in that preset is dimmed, says what opens it ("Pass all 7 in Notes
+  · 4 / 7") and can't be tapped.
+- Home opens on the tab last used, saved the moment it changes.
 
 ### 7.2 Session sheet
 
-Mode (Notes / Speed / Melody — each shown locked until it opens), **length**
-(10 / 20 / 40 prompts or 3 / 5 / 10 minutes, default 20 prompts — a melody counts
-as one prompt), tonic lock, tonic change every X, and for Melody its length and
-tempo. It opens on the choices the last session started with, saved across
-reloads and shared by all presets; a remembered mode that isn't open in this
-preset falls back to Notes.
+The mode is the Home tab's (§7.1); the sheet has no mode picker, so there is one
+place to choose it. The sheet holds the **length** (10 / 20 / 40 prompts or
+3 / 5 / 10 minutes, default 20 prompts — a melody counts as one prompt), tonic
+lock, tonic change every X, and for Melody its length and tempo. It opens on the
+choices the last session started with, saved across reloads and shared by all
+presets and modes.
 
 ### 7.3 Stage and the answer pad
 
@@ -340,7 +365,8 @@ rest.
 window), the confusion log of (played, tapped) pairs, a per-preset progress record
 (unlocked count, a 5-answer pass window per degree, passed degrees, melody
 outcome window), daily records (date, active minutes), settings and the session
-sheet's last choices. Schema-versioned from the start.
+sheet's last choices, whose mode doubles as Home's open tab. Schema-versioned
+from the start.
 
 ---
 

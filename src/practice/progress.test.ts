@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getPreset, type Degree } from '../theory'
+import { emptyStatsMap, type DegreeStatsMap } from './stats'
 import {
   dealableDegrees,
   freshProgress,
@@ -7,6 +8,8 @@ import {
   melodyGrade,
   passedDegrees,
   passesWindow,
+  presetGrade,
+  presetStar,
   recordMelodyOutcome,
   recordNotesAnswer,
   unlockedDegrees,
@@ -171,5 +174,63 @@ describe('melody outcomes', () => {
   it('shows no grade until 5 melodies', () => {
     const progress = recordMelodyOutcome(freshProgress(major), true)
     expect(melodyGrade(progress)).toBeNull()
+  })
+})
+
+// Stats with the given Notes outcomes or Speed times on each degree.
+function withStats(
+  per: Partial<Record<Degree, { outcomes?: boolean[]; times?: number[] }>>,
+): DegreeStatsMap {
+  const map = { ...emptyStatsMap() }
+  for (const [degree, { outcomes = [], times = [] }] of Object.entries(per)) {
+    map[Number(degree) as Degree] = { outcomes, speedTimesMs: times }
+  }
+  return map
+}
+
+const right = (n: number, of = 10) =>
+  Array.from({ length: of }, (_, i) => i < n)
+
+describe('presetGrade', () => {
+  it('averages the open degrees and rounds down', () => {
+    // 1 at A, 5 at C: B
+    const stats = withStats({
+      0: { outcomes: right(10) },
+      7: { outcomes: right(7) },
+    })
+    expect(presetGrade(major, freshProgress(major), stats)).toBe('B')
+  })
+
+  it('leaves out ungraded and locked degrees', () => {
+    const stats = withStats({
+      0: { outcomes: right(9) },
+      7: { outcomes: right(4, 4) }, // too few answers
+      4: { outcomes: right(0) }, // 3, still locked
+    })
+    expect(presetGrade(major, freshProgress(major), stats)).toBe('A')
+  })
+
+  it('is "—" until an open degree is graded', () => {
+    expect(presetGrade(major, freshProgress(major), emptyStatsMap())).toBeNull()
+  })
+})
+
+describe('presetStar', () => {
+  const gold = [500, 500, 500, 500, 500]
+  const slow = [4000, 4000, 4000, 4000, 4000]
+
+  it('averages the rated degrees and rounds down', () => {
+    const stats = withStats({ 0: { times: gold }, 7: { times: slow } })
+    expect(presetStar(major, stats)).toBe('bronze')
+  })
+
+  it('leaves out degrees with fewer than 5 times', () => {
+    const stats = withStats({ 0: { times: gold }, 7: { times: [4000] } })
+    expect(presetStar(major, stats)).toBe('gold')
+  })
+
+  it('is \'none\' when rated without a star, and "—" before that', () => {
+    expect(presetStar(major, withStats({ 0: { times: slow } }))).toBe('none')
+    expect(presetStar(major, emptyStatsMap())).toBeNull()
   })
 })

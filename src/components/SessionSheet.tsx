@@ -1,19 +1,15 @@
-// The session sheet (DESIGN.md §7.2): a bottom sheet over Home with the
-// mode (each shown locked until it opens), the length, the tonic lock, the
-// tonic change interval, and Melody's length and tempo.
+// The session sheet (DESIGN.md §7.2): a bottom sheet over Home for the open
+// tab's mode, with the length, the tonic lock, the tonic change interval, and
+// Melody's length and tempo. Home only opens it on a preset where that mode
+// is open.
 
 import { useState, type ReactNode } from 'react'
 import {
-  freshProgress,
-  isModeOpen,
   MELODY_LENGTHS,
-  MELODY_OPENS_AT,
-  MODES,
   PROMPT_COUNTS,
   SESSION_MINUTES,
   TEMPOS,
   TONIC_CHANGE_EVERY,
-  type Mode,
   type SessionOptions,
 } from '../practice'
 import { practiceStore, usePractice } from '../store'
@@ -40,24 +36,11 @@ export function SessionSheet({
   onClose: () => void
 }) {
   const preset = getPreset(presetId)
-  // Defaulted outside the selector: a fresh object per call would re-render
-  // forever.
-  const progress =
-    usePractice((s) => s.records.presetProgress[presetId]) ??
-    freshProgress(preset)
+  // The remembered options; their mode is Home's open tab.
   const lastOptions = usePractice((s) => s.lastOptions)
-  const open = (mode: Mode) => isModeOpen(preset, progress, mode)
-  const [options, setOptions] = useState<SessionOptions>(() =>
-    open(lastOptions.mode) ? lastOptions : { ...lastOptions, mode: 'notes' },
-  )
+  const [options, setOptions] = useState<SessionOptions>(lastOptions)
   const set = (patch: Partial<SessionOptions>) =>
     setOptions((current) => ({ ...current, ...patch }))
-
-  const lockedHint: Record<Mode, string> = {
-    notes: '',
-    speed: `all ${preset.order.length} passed`,
-    melody: `${MELODY_OPENS_AT} passed`,
-  }
 
   // Close first, then start, both inside the tap: starting the drone here
   // is what unlocks audio on iOS (§2).
@@ -76,26 +59,10 @@ export function SessionSheet({
         onClick={onClose}
       />
       <div className="relative mx-auto flex max-h-[90dvh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-[24px] border-2 border-b-0 border-card-border bg-card px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        <h2 className="text-2xl font-extrabold">{preset.name}</h2>
-
-        <Row label="Mode">
-          {MODES.map((mode) =>
-            open(mode) ? (
-              <Chip
-                key={mode}
-                className={CHIP}
-                selected={options.mode === mode}
-                onClick={() => set({ mode })}
-              >
-                {MODE_LABELS[mode]}
-              </Chip>
-            ) : (
-              <Chip key={mode} className={CHIP} tone="locked">
-                🔒 {MODE_LABELS[mode]} · {lockedHint[mode]}
-              </Chip>
-            ),
-          )}
-        </Row>
+        <h2 className="text-2xl font-extrabold">
+          {preset.name}
+          <span className="text-ink-muted"> · {MODE_LABELS[options.mode]}</span>
+        </h2>
 
         <Row label="Length">
           {PROMPT_COUNTS.map((count) => (

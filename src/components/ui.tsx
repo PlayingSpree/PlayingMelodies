@@ -85,6 +85,42 @@ export function RaisedButton({
   )
 }
 
+// A row of equal tabs, one selected, in a sunken track.
+export function Tabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: readonly { id: T; label: string }[]
+  value: T
+  onChange: (id: T) => void
+}) {
+  return (
+    <div
+      role="tablist"
+      className="flex gap-1 rounded-[18px] border-2 border-muted-border bg-surface p-1"
+    >
+      {tabs.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={id === value}
+          onClick={() => onChange(id)}
+          className={cx(
+            'flex-1 rounded-[14px] border-2 py-2 text-base transition-transform active:translate-y-[1px]',
+            id === value
+              ? 'border-primary bg-primary-tint font-extrabold text-primary-light'
+              : 'border-transparent font-semibold text-ink-soft',
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 type ChipTone = 'default' | 'info' | 'locked'
 
 const CHIP_TONES: Record<ChipTone, { on: string; off: string }> = {

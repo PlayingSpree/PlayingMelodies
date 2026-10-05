@@ -116,6 +116,19 @@ describe('practiceStore', () => {
     expect(reloaded.getState().lastOptions.tempo).toBe('fast')
   })
 
+  it('saves the chosen mode at once, across reloads', () => {
+    const t = setup()
+    t.store.getState().chooseMode('speed')
+    expect(t.store.getState().lastOptions.mode).toBe('speed')
+
+    const reloaded = createPracticeStore({
+      storage: t.storage,
+      sound: recordingSound(),
+      settings: () => DEFAULT_SETTINGS,
+    })
+    expect(reloaded.getState().lastOptions.mode).toBe('speed')
+  })
+
   it('a right answer is persisted, then the next prompt follows', () => {
     const t = setup()
     t.start()
