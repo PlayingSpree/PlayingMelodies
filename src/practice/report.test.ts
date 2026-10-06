@@ -13,6 +13,7 @@ import {
   type SessionState,
 } from './session'
 import { DEFAULT_SESSION_OPTIONS, type SessionOptions } from './sessionOptions'
+import { DEFAULT_SETTINGS, feedbackSettings } from './settings'
 import { emptyStatsMap, recordNotesOutcome, recordSpeedTime } from './stats'
 
 const MAJOR = getPreset('major')
@@ -45,7 +46,7 @@ function play(
       preset: MAJOR,
       options: { ...DEFAULT_SESSION_OPTIONS, ...options },
       register: 1,
-      feedbackSound: 'misses',
+      feedback: feedbackSettings(DEFAULT_SETTINGS),
     },
     slice,
     t,

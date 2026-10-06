@@ -35,7 +35,14 @@ describe('resolveToTonic', () => {
 
   it('has nowhere to go from the tonic', () => {
     expect(resolveToTonic(0)).toBeNull()
-    expect(resolveToTonic(24)).toBeNull()
+    expect(resolveToTonic(24, 'up')).toBeNull()
+  })
+
+  it('always rises or always falls when told to', () => {
+    expect(resolveToTonic(14, 'up')).toBe(24) // 2
+    expect(resolveToTonic(19, 'up')).toBe(24) // 5
+    expect(resolveToTonic(14, 'down')).toBe(12)
+    expect(resolveToTonic(19, 'down')).toBe(12)
   })
 })
 
@@ -91,6 +98,11 @@ describe('noteFeedbackCue', () => {
     const cue = noteFeedbackCue(16, 4)
     expect(positions(cue)).toEqual([16, 12])
     expect(cue).toEqual(noteFeedbackCue(16, null))
+  })
+
+  it('resolves the way it is told', () => {
+    expect(positions(noteFeedbackCue(9, 7, 'down'))).toEqual([7, 9, 0])
+    expect(positions(noteFeedbackCue(16, null, 'up'))).toEqual([16, 24])
   })
 
   it('holds the tonic instead of resolving it', () => {

@@ -19,8 +19,12 @@ import {
   type SessionStep,
 } from './session'
 import { DEFAULT_SESSION_OPTIONS, type SessionOptions } from './sessionOptions'
-import type { FeedbackSound } from './settings'
-import { emptyStatsMap, SPEED_LIMIT_MS } from './stats'
+import {
+  DEFAULT_SETTINGS,
+  feedbackSettings,
+  type FeedbackSettings,
+} from './settings'
+import { emptyStatsMap, SPEED_LIMIT_MS, type DegreeStatsMap } from './stats'
 import { tonicMidi } from './tonic'
 
 const MAJOR = getPreset('major')
@@ -54,14 +58,14 @@ function start(
   options: Partial<SessionOptions> = {},
   practice = practiceWith(),
   seed = 1,
-  feedbackSound: FeedbackSound = 'misses',
+  feedback: Partial<FeedbackSettings> = {},
 ): SessionStep {
   return startSession(
     {
       preset: MAJOR,
       options: { ...DEFAULT_SESSION_OPTIONS, ...options },
       register: 1,
-      feedbackSound,
+      feedback: { ...feedbackSettings(DEFAULT_SETTINGS), ...feedback },
     },
     practice,
     0,
@@ -74,10 +78,10 @@ function firstPrompt(
   options: Partial<SessionOptions> = {},
   practice = practiceWith(),
   seed = 1,
-  feedbackSound: FeedbackSound = 'misses',
+  feedback: Partial<FeedbackSettings> = {},
 ): SessionStep {
   return advance(
-    start(options, practice, seed, feedbackSound).state,
+    start(options, practice, seed, feedback).state,
     SETTLE_MS,
     seeded(seed),
   )
@@ -400,7 +404,9 @@ describe('feedback notes setting', () => {
   }
 
   it('plays the correct note resolving after a right answer on every answer', () => {
-    const { state } = firstPrompt({}, practiceWith(), 1, 'all')
+    const { state } = firstPrompt({}, practiceWith(), 1, {
+      feedbackSound: 'all',
+    })
     const step = tap(state, playedDegree(state), 3000)
     expect(cueOf(step)?.notes[0]?.position).toBe(prompt(state)[0])
     expect(wakes(step.effects)).toEqual([
@@ -409,9 +415,13 @@ describe('feedback notes setting', () => {
   })
 
   it('replays a clean melody on every answer, but not on misses only', () => {
-    const all = firstPrompt(melody, ALL_PASSED, 1, 'all').state
+    const all = firstPrompt(melody, ALL_PASSED, 1, {
+      feedbackSound: 'all',
+    }).state
     expect(cueOf(answerMelody(all, true))?.notes).toHaveLength(3)
-    const misses = firstPrompt(melody, ALL_PASSED, 1, 'misses').state
+    const misses = firstPrompt(melody, ALL_PASSED, 1, {
+      feedbackSound: 'misses',
+    }).state
     expect(cueOf(answerMelody(misses, true))).toEqual({
       notes: [],
       lengthMs: RIGHT_FEEDBACK_MS,
@@ -420,7 +430,9 @@ describe('feedback notes setting', () => {
   })
 
   it('plays nothing on never, and holds a miss longer', () => {
-    const { state } = firstPrompt({}, practiceWith(), 1, 'never')
+    const { state } = firstPrompt({}, practiceWith(), 1, {
+      feedbackSound: 'never',
+    })
     expect(cueOf(tap(state, playedDegree(state), 3000))).toEqual({
       notes: [],
       lengthMs: RIGHT_FEEDBACK_MS,
@@ -429,11 +441,133 @@ describe('feedback notes setting', () => {
       notes: [],
       lengthMs: SILENT_MISS_MS,
     })
-    const tune = firstPrompt(melody, ALL_PASSED, 1, 'never').state
+    const tune = firstPrompt(melody, ALL_PASSED, 1, {
+      feedbackSound: 'never',
+    }).state
     expect(cueOf(answerMelody(tune, false))).toEqual({
       notes: [],
       lengthMs: SILENT_MISS_MS,
     })
+  })
+})
+
+// Every degree's Notes window at `right` out of 10.
+function statsAt(right: number): DegreeStatsMap {
+  const outcomes = Array.from({ length: 10 }, (_, i) => i < right)
+  const stats = { ...emptyStatsMap() }
+  for (const degree of Object.keys(stats)) {
+    stats[Number(degree) as Degree] = { outcomes, speedTimesMs: [] }
+  }
+  return stats
+}
+
+describe('feedback notes below a grade', () => {
+  const below = { feedbackSound: 'below' } as const
+
+  function rightCue(
+    practice: PracticeSlice,
+    feedback: Partial<FeedbackSettings>,
+  ): Cue | undefined {
+    const { state } = firstPrompt({}, practice, 1, { ...below, ...feedback })
+    return cueOf(tap(state, playedDegree(state), 3000))
+  }
+
+  it('plays on a right answer to a degree graded below the bar', () => {
+    const c = { ...practiceWith(), degreeStats: statsAt(7) }
+    expect(rightCue(c, { feedbackBelow: 'B' })?.notes).not.toHaveLength(0)
+    expect(rightCue(c, { feedbackBelow: 'C' })?.notes).toHaveLength(0)
+  })
+
+  it('plays for an ungraded degree, not for one at the bar', () => {
+    expect(rightCue(practiceWith(), {})?.notes).not.toHaveLength(0)
+    const b = { ...practiceWith(), degreeStats: statsAt(8) }
+    expect(rightCue(b, {})?.notes).toHaveLength(0)
+  })
+
+  it('always plays on a miss', () => {
+    const a = { ...practiceWith(), degreeStats: statsAt(10) }
+    const { state } = firstPrompt({}, a, 1, below)
+    expect(cueOf(tap(state, wrongDegree(state), 3000))?.notes).not.toHaveLength(
+      0,
+    )
+  })
+
+  it('reads the melody grade in Melody', () => {
+    const melody = { mode: 'melody', melodyLength: 1 } as const
+    const clean = (right: number) => ({
+      ...ALL_PASSED,
+      progress: {
+        ...ALL_PASSED.progress,
+        melodyOutcomes: Array.from({ length: 10 }, (_, i) => i < right),
+      },
+    })
+    for (const [right, notes] of [
+      [10, 0],
+      [7, 1],
+    ] as const) {
+      const { state } = firstPrompt(melody, clean(right), 1, below)
+      expect(cueOf(tap(state, playedDegree(state), 3000))?.notes).toHaveLength(
+        notes,
+      )
+    }
+  })
+})
+
+describe('resolve direction', () => {
+  const all = { feedbackSound: 'all' } as const
+
+  // The way each answer's feedback resolved, over `count` right answers;
+  // null where the played note was the tonic.
+  function ways(
+    feedback: Partial<FeedbackSettings>,
+    count: number,
+    rng?: Rng,
+  ): ('up' | 'down' | null)[] {
+    let step = firstPrompt({}, practiceWith(), 1, { ...all, ...feedback })
+    const result: ('up' | 'down' | null)[] = []
+    let t = 3000
+    for (let i = 0; i < count; i++) {
+      const played = prompt(step.state)[0] ?? 0
+      const answered = tap(step.state, degreeAt(played), t, rng)
+      const notes = cueOf(answered)?.notes ?? []
+      const last = notes.at(-1)?.position ?? played
+      result.push(notes.length < 2 ? null : last > played ? 'up' : 'down')
+      t += 10_000
+      step = advance(answered.state, t, seeded(i))
+      t += SETTLE_MS * 3
+      if (step.state.phase.kind === 'settling') {
+        step = advance(step.state, t)
+      }
+    }
+    return result
+  }
+
+  it('goes the set way', () => {
+    const up = ways({ resolveDirection: 'up' }, 8)
+    expect(up).toContain('up')
+    expect(up).not.toContain('down')
+    const down = ways({ resolveDirection: 'down' }, 8)
+    expect(down).toContain('down')
+    expect(down).not.toContain('up')
+  })
+
+  it('alternates every few resolves, skipping the tonic', () => {
+    const resolved = ways(
+      { resolveDirection: 'alternate', alternateEvery: 2 },
+      12,
+    ).filter((way) => way !== null)
+    expect(resolved.length).toBeGreaterThan(4)
+    resolved.forEach((way, i) => {
+      expect(way).toBe(Math.floor(i / 2) % 2 === 0 ? 'up' : 'down')
+    })
+  })
+
+  it('picks up or down at random', () => {
+    const random = { resolveDirection: 'random' } as const
+    expect(ways(random, 6, () => 0.2)).toContain('up')
+    expect(ways(random, 6, () => 0.2)).not.toContain('down')
+    expect(ways(random, 6, () => 0.8)).toContain('down')
+    expect(ways(random, 6, () => 0.8)).not.toContain('up')
   })
 })
 

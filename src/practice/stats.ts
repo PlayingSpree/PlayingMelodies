@@ -94,6 +94,14 @@ export function averageGrade(grades: readonly Grade[]): Grade | null {
   return GRADE_POINTS[Math.floor(points / grades.length)] ?? null
 }
 
+// Whether a grade falls short of `bar`. No grade yet ("—") does: an unrated
+// degree is still being learned.
+export function gradeBelow(grade: Grade | null, bar: Grade): boolean {
+  return (
+    grade === null || GRADE_POINTS.indexOf(grade) < GRADE_POINTS.indexOf(bar)
+  )
+}
+
 export type Star = 'gold' | 'silver' | 'bronze'
 
 export function median(values: readonly number[]): number | null {

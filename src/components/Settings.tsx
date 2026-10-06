@@ -1,15 +1,19 @@
 // Settings (DESIGN.md §7.5): drone and note volume with a test sound to set
-// them by, which answers play feedback notes, register, the daily goal,
-// JSON export/import of everything stored, and reset progress per preset.
+// them by, which answers play feedback notes and which way they resolve,
+// register, the daily goal, JSON export/import of everything stored, and
+// reset progress per preset.
 // Reached from Home only, so nothing here runs mid-session.
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { sound } from '../audio'
 import {
+  FEEDBACK_BARS,
   FEEDBACK_SOUNDS,
   localDateKey,
+  MAX_ALTERNATE_EVERY,
   MAX_GOAL_MINUTES,
   promptCue,
+  RESOLVE_DIRECTIONS,
   TONIC_BASE_MIDI,
 } from '../practice'
 import {
@@ -25,7 +29,7 @@ import {
   type PersistedState,
 } from '../storage'
 import { PRESETS, REGISTER_OCTAVES, type Preset } from '../theory'
-import { FEEDBACK_SOUND_LABELS } from './labels'
+import { FEEDBACK_SOUND_LABELS, RESOLVE_DIRECTION_LABELS } from './labels'
 import { Card, Chip, RaisedButton, SectionLabel } from './ui'
 
 const CHIP = 'px-3 py-1.5 text-sm'
@@ -49,6 +53,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
         </RaisedButton>
       </header>
       <SoundSection />
+      <FeedbackSection />
       <PracticeSection />
       <BackupSection />
       <ResetSection />
@@ -121,7 +126,6 @@ function useTestSound() {
 function SoundSection() {
   const drone = useSettings((s) => s.settings.droneVolume)
   const note = useSettings((s) => s.settings.noteVolume)
-  const feedback = useSettings((s) => s.settings.feedbackSound)
   const update = useSettings((s) => s.update)
   const { testing, toggle } = useTestSound()
   return (
@@ -143,21 +147,137 @@ function SoundSection() {
         value={note}
         onChange={(noteVolume) => update({ noteVolume })}
       />
-      <div className="flex flex-col gap-2">
-        <span className="font-semibold">Feedback notes after</span>
-        <div className="flex flex-wrap gap-2">
-          {FEEDBACK_SOUNDS.map((sound) => (
-            <Chip
-              key={sound}
-              className={CHIP}
-              selected={feedback === sound}
-              onClick={() => update({ feedbackSound: sound })}
-            >
-              {FEEDBACK_SOUND_LABELS[sound]}
-            </Chip>
-          ))}
-        </div>
+    </Section>
+  )
+}
+
+function Choice<T extends string | number>({
+  label,
+  choices,
+  value,
+  name,
+  onChange,
+}: {
+  label: string
+  choices: readonly T[]
+  value: T
+  name: (choice: T) => string
+  onChange: (choice: T) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="font-semibold">{label}</span>
+      <div className="flex flex-wrap gap-2">
+        {choices.map((choice) => (
+          <Chip
+            key={choice}
+            className={CHIP}
+            selected={value === choice}
+            onClick={() => onChange(choice)}
+          >
+            {name(choice)}
+          </Chip>
+        ))}
       </div>
+    </div>
+  )
+}
+
+const STEP =
+  'flex h-9 w-9 items-center justify-center rounded-[12px] border-2 border-muted-border text-lg font-extrabold leading-none text-ink-soft transition-transform active:translate-y-[1px] disabled:opacity-40'
+
+function Stepper({
+  label,
+  value,
+  text,
+  canDown,
+  canUp,
+  onDown,
+  onUp,
+}: {
+  label: string
+  value: string
+  text: string
+  canDown: boolean
+  canUp: boolean
+  onDown: () => void
+  onUp: () => void
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="font-semibold">{label}</span>
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          aria-label={`Decrease ${text}`}
+          className={STEP}
+          disabled={!canDown}
+          onClick={onDown}
+        >
+          −
+        </button>
+        <span className="min-w-16 text-center font-semibold tabular-nums">
+          {value}
+        </span>
+        <button
+          type="button"
+          aria-label={`Increase ${text}`}
+          className={STEP}
+          disabled={!canUp}
+          onClick={onUp}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Which answers play feedback notes, and which way the correct note
+// resolves to the 1 (§6.1). The bar and the alternate count only show while
+// they apply.
+function FeedbackSection() {
+  const feedback = useSettings((s) => s.settings.feedbackSound)
+  const bar = useSettings((s) => s.settings.feedbackBelow)
+  const direction = useSettings((s) => s.settings.resolveDirection)
+  const every = useSettings((s) => s.settings.alternateEvery)
+  const update = useSettings((s) => s.update)
+  return (
+    <Section label="Feedback">
+      <Choice
+        label="Feedback notes after"
+        choices={FEEDBACK_SOUNDS}
+        value={feedback}
+        name={(sound) => FEEDBACK_SOUND_LABELS[sound]}
+        onChange={(feedbackSound) => update({ feedbackSound })}
+      />
+      {feedback === 'below' && (
+        <Choice
+          label="And right answers graded below"
+          choices={FEEDBACK_BARS}
+          value={bar}
+          name={(grade) => grade}
+          onChange={(feedbackBelow) => update({ feedbackBelow })}
+        />
+      )}
+      <Choice
+        label="Resolve to the 1"
+        choices={RESOLVE_DIRECTIONS}
+        value={direction}
+        name={(way) => RESOLVE_DIRECTION_LABELS[way]}
+        onChange={(resolveDirection) => update({ resolveDirection })}
+      />
+      {direction === 'alternate' && (
+        <Stepper
+          label="Switch every"
+          value={`${every}`}
+          text="switch count"
+          canDown={every > 1}
+          canUp={every < MAX_ALTERNATE_EVERY}
+          onDown={() => update({ alternateEvery: every - 1 })}
+          onUp={() => update({ alternateEvery: every + 1 })}
+        />
+      )}
     </Section>
   )
 }
@@ -177,56 +297,28 @@ function goalDown(minutes: number): number {
   )
 }
 
-const STEP =
-  'flex h-9 w-9 items-center justify-center rounded-[12px] border-2 border-muted-border text-lg font-extrabold leading-none text-ink-soft transition-transform active:translate-y-[1px] disabled:opacity-40'
-
 function PracticeSection() {
   const register = useSettings((s) => s.settings.register)
   const goal = useSettings((s) => s.settings.goalMinutes)
   const update = useSettings((s) => s.update)
   return (
     <Section label="Practice">
-      <div className="flex flex-col gap-2">
-        <span className="font-semibold">Register</span>
-        <div className="flex flex-wrap gap-2">
-          {REGISTER_OCTAVES.map((octaves) => (
-            <Chip
-              key={octaves}
-              className={CHIP}
-              selected={register === octaves}
-              onClick={() => update({ register: octaves })}
-            >
-              {octaves} octave{octaves === 1 ? '' : 's'}
-            </Chip>
-          ))}
-        </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="font-semibold">Daily goal</span>
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            aria-label="Decrease daily goal"
-            className={STEP}
-            disabled={goal <= 1}
-            onClick={() => update({ goalMinutes: goalDown(goal) })}
-          >
-            −
-          </button>
-          <span className="min-w-16 text-center font-semibold tabular-nums">
-            {goal} min
-          </span>
-          <button
-            type="button"
-            aria-label="Increase daily goal"
-            className={STEP}
-            disabled={goal >= MAX_GOAL_MINUTES}
-            onClick={() => update({ goalMinutes: goalUp(goal) })}
-          >
-            +
-          </button>
-        </div>
-      </div>
+      <Choice
+        label="Register"
+        choices={REGISTER_OCTAVES}
+        value={register}
+        name={(octaves) => `${octaves} octave${octaves === 1 ? '' : 's'}`}
+        onChange={(octaves) => update({ register: octaves })}
+      />
+      <Stepper
+        label="Daily goal"
+        value={`${goal} min`}
+        text="daily goal"
+        canDown={goal > 1}
+        canUp={goal < MAX_GOAL_MINUTES}
+        onDown={() => update({ goalMinutes: goalDown(goal) })}
+        onUp={() => update({ goalMinutes: goalUp(goal) })}
+      />
     </Section>
   )
 }

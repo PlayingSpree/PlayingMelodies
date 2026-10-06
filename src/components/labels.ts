@@ -6,6 +6,7 @@ import type {
   Grade,
   Mode,
   PitchClass,
+  ResolveDirection,
   Star,
   Tempo,
 } from '../practice'
@@ -24,8 +25,19 @@ export const TEMPO_LABELS: Readonly<Record<Tempo, string>> = {
 
 export const FEEDBACK_SOUND_LABELS: Readonly<Record<FeedbackSound, string>> = {
   all: 'Every answer',
+  below: 'Low grades',
   misses: 'Misses only',
   never: 'Never',
+}
+
+export const RESOLVE_DIRECTION_LABELS: Readonly<
+  Record<ResolveDirection, string>
+> = {
+  closest: 'Closest',
+  up: 'Up',
+  down: 'Down',
+  alternate: 'Alternate',
+  random: 'Random',
 }
 
 // The tonic lock is the one place a pitch is named (§3.2); spelled the way

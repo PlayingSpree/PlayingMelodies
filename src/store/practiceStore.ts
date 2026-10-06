@@ -12,6 +12,7 @@ import {
   addActiveMinutes,
   advance,
   endSession,
+  feedbackSettings,
   freshProgress,
   localDateKey,
   replay,
@@ -149,7 +150,7 @@ export function createPracticeStore({
               wake(() => step((s) => advance(s, now(), rng)), effect.inMs)
             } else {
               const { prompt } = effect
-              wake(() => step((s) => timeout(s, prompt)), effect.inMs)
+              wake(() => step((s) => timeout(s, prompt, rng)), effect.inMs)
             }
             break
         }
@@ -217,9 +218,9 @@ export function createPracticeStore({
           confusions: records.confusions,
           progress: records.presetProgress[presetId] ?? freshProgress(preset),
         }
-        const { register, feedbackSound } = settings()
+        const { register } = settings()
         const { state, effects } = startSession(
-          { preset, options, register, feedbackSound },
+          { preset, options, register, feedback: feedbackSettings(settings()) },
           practice,
           now(),
           rng,
@@ -236,7 +237,7 @@ export function createPracticeStore({
       },
 
       tap(degree) {
-        step((s) => tap(s, degree, now()))
+        step((s) => tap(s, degree, now(), rng))
       },
 
       undo() {

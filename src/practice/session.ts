@@ -20,16 +20,18 @@ import {
   melodyFeedbackCue,
   noteFeedbackCue,
   promptCue,
+  resolveToTonic,
   silentCue,
   type Cue,
+  type Resolve,
 } from './cues'
 import { dealDegree, placeDegree, type Rng } from './dealer'
 import { gradeAnswer, type Answer, type PracticeSlice } from './grading'
 import { generateMelody } from './melody'
-import { dealableDegrees, isModeOpen } from './progress'
+import { dealableDegrees, isModeOpen, melodyGrade } from './progress'
 import type { PitchClass, SessionOptions } from './sessionOptions'
-import type { FeedbackSound } from './settings'
-import { SPEED_LIMIT_MS } from './stats'
+import type { FeedbackSettings } from './settings'
+import { gradeBelow, SPEED_LIMIT_MS, windowGrade } from './stats'
 import { pickTonic, tonicMidi } from './tonic'
 
 // After the drone starts or retunes, a pause before the next prompt, so the
@@ -41,7 +43,7 @@ export interface SessionSetup {
   preset: Preset
   options: SessionOptions
   register: RegisterOctaves
-  feedbackSound: FeedbackSound
+  feedback: FeedbackSettings
 }
 
 // One graded prompt, for the Report.
@@ -81,6 +83,8 @@ export interface SessionState {
   newlyPassed: Degree[]
   newlyUnlocked: Degree[]
   activity: ActivityClock
+  // Feedback cues so far that resolved to a tonic, for 'alternate' (§6.1).
+  resolves: number
 }
 
 export type SessionEffect =
@@ -127,6 +131,7 @@ export function startSession(
       newlyUnlocked: [],
       // The Start tap is the first interaction.
       activity: touchActivity(IDLE_CLOCK, nowMs),
+      resolves: 0,
     },
     effects: [
       { kind: 'startDrone', tonicMidi: tonicMidi(tonic) },
@@ -242,6 +247,50 @@ export function advance(
   }
 }
 
+// Whether an answer plays feedback notes (§6.1, §7.5). 'below' reads the
+// grade as it stood before this answer: the degree's Notes grade — Speed's
+// too, since stars rate speed, not knowing — or in Melody the preset's
+// melody grade.
+function playsFeedback(state: SessionState, correct: boolean): boolean {
+  const { feedbackSound, feedbackBelow } = state.setup.feedback
+  switch (feedbackSound) {
+    case 'all':
+      return true
+    case 'never':
+      return false
+    case 'misses':
+      return !correct
+    case 'below': {
+      if (!correct || state.phase.kind !== 'answering') return true
+      const { practice } = state
+      const grade =
+        state.setup.options.mode === 'melody'
+          ? melodyGrade(practice.progress)
+          : windowGrade(
+              practice.degreeStats[degreeAt(state.phase.prompt[0] ?? 0)]
+                .outcomes,
+            )
+      return gradeBelow(grade, feedbackBelow)
+    }
+  }
+}
+
+// Which way the next resolve goes: 'alternate' starts each session up and
+// switches every `alternateEvery` resolves.
+function resolveWay(state: SessionState, rng: Rng): Resolve {
+  const { resolveDirection, alternateEvery } = state.setup.feedback
+  switch (resolveDirection) {
+    case 'alternate':
+      return Math.floor(state.resolves / alternateEvery) % 2 === 0
+        ? 'up'
+        : 'down'
+    case 'random':
+      return rng() < 0.5 ? 'up' : 'down'
+    default:
+      return resolveDirection
+  }
+}
+
 // Grades the answering phase's prompt. `tapped` is every tap that answers
 // it: one in Notes and Speed (none for a timeout), every slot in Melody.
 function grade(
@@ -249,6 +298,7 @@ function grade(
   tapped: Degree[],
   nowMs: number,
   timedOut: boolean,
+  rng: Rng,
 ): SessionStep {
   if (state.phase.kind !== 'answering') return still(state)
   const { prompt, startedMs } = state.phase
@@ -277,13 +327,19 @@ function grade(
     slots: result.slots,
     timeMs,
   }
-  const { feedbackSound } = state.setup
-  const cue =
-    feedbackSound === 'never' || (feedbackSound === 'misses' && result.correct)
-      ? silentCue(result.correct)
-      : options.mode === 'melody'
-        ? melodyFeedbackCue(prompt, tapped, options.tempo)
-        : noteFeedbackCue(played, tapped[0] ?? null)
+  const sounds = playsFeedback(state, result.correct)
+  // Melody's feedback replays the melody and has no resolve (§6.3).
+  const resolves =
+    sounds && options.mode !== 'melody' && resolveToTonic(played) !== null
+  const cue = !sounds
+    ? silentCue(result.correct)
+    : options.mode === 'melody'
+      ? melodyFeedbackCue(prompt, tapped, options.tempo)
+      : noteFeedbackCue(
+          played,
+          tapped[0] ?? null,
+          resolves ? resolveWay(state, rng) : 'closest',
+        )
 
   const next: SessionState = {
     ...state,
@@ -296,6 +352,7 @@ function grade(
         ? state.newlyPassed
         : [...state.newlyPassed, result.newlyPassed],
     newlyUnlocked: [...state.newlyUnlocked, ...result.newlyUnlocked],
+    resolves: state.resolves + (resolves ? 1 : 0),
   }
   return {
     state: next,
@@ -314,22 +371,23 @@ export function tap(
   state: SessionState,
   degree: Degree,
   nowMs: number,
+  rng: Rng = Math.random,
 ): SessionStep {
   const touched = { ...state, activity: touchActivity(state.activity, nowMs) }
   const { phase } = touched
   if (phase.kind !== 'answering') return still(touched)
   if (phase.deadlineMs !== null && nowMs >= phase.deadlineMs) {
     // A tap racing a late timeout callback loses: the time was up.
-    return grade(touched, [], phase.deadlineMs, true)
+    return grade(touched, [], phase.deadlineMs, true, rng)
   }
   if (touched.setup.options.mode !== 'melody') {
-    return grade(touched, [degree], nowMs, false)
+    return grade(touched, [degree], nowMs, false, rng)
   }
   const slots = [...phase.slots, degree]
   if (slots.length < phase.prompt.length) {
     return still({ ...touched, phase: { ...phase, slots } })
   }
-  return grade(touched, slots, nowMs, false)
+  return grade(touched, slots, nowMs, false, rng)
 }
 
 // Melody's undo key: empties the last filled slot.
@@ -362,7 +420,11 @@ export function replay(state: SessionState, nowMs: number): SessionStep {
 
 // Speed's limit ran out on prompt index `prompt` (§6.2): a miss. A callback
 // for a prompt already answered does nothing.
-export function timeout(state: SessionState, prompt: number): SessionStep {
+export function timeout(
+  state: SessionState,
+  prompt: number,
+  rng: Rng = Math.random,
+): SessionStep {
   const { phase } = state
   if (
     phase.kind !== 'answering' ||
@@ -371,7 +433,7 @@ export function timeout(state: SessionState, prompt: number): SessionStep {
   ) {
     return still(state)
   }
-  return grade(state, [], phase.deadlineMs, true)
+  return grade(state, [], phase.deadlineMs, true, rng)
 }
 
 // The player quits. Whatever was answered stands and goes to the Report.

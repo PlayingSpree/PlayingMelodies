@@ -10,6 +10,15 @@ produced it.
 
 ---
 
+## 0.10.0 — 2026-10-06
+
+**Feedback notes can follow low grades and resolve a chosen way.** A fourth
+feedback-notes option, low grades, plays on every miss and on right answers to a
+degree graded below a chosen bar (B, C or D), an ungraded one included; Melody
+reads the melody grade. A second setting picks which tonic the correct note
+resolves to: closest (as before), always up, always down, alternating every 1–10
+resolves, or random. Settings gets its own Feedback section (§6.1, §7.5).
+
 ## 0.9.0 — 2026-10-05
 
 **Combined is Chromatic, and presets start at different counts.** The all-12

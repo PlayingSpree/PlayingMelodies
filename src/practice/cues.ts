@@ -45,12 +45,21 @@ export const TEMPO_STEP_MS: Readonly<Record<Tempo, number>> = {
 }
 const MELODY_NOTE_SHARE = 0.9
 
-// Where a position resolves: straight to the nearest tonic, so ♭2–4 fall and
-// ♯4–7 rise (♯4, a tritone either way, rises). Null for the tonic itself.
-export function resolveToTonic(position: number): number | null {
+// Which tonic a note resolves to (§6.1): the nearest one, or always the one
+// above or below it.
+export type Resolve = 'closest' | 'up' | 'down'
+
+// Where a position resolves: straight to a tonic in its own octave. Closest
+// lets ♭2–4 fall and ♯4–7 rise (♯4, a tritone either way, rises). Null for
+// the tonic itself.
+export function resolveToTonic(
+  position: number,
+  way: Resolve = 'closest',
+): number | null {
   const degree = degreeAt(position)
   if (degree === 0) return null
-  return degree < 6 ? position - degree : position + (12 - degree)
+  const rises = way === 'closest' ? degree >= 6 : way === 'up'
+  return rises ? position + (12 - degree) : position - degree
 }
 
 // A degree placed in the same octave as `position`, for tapped-versus-correct.
@@ -82,9 +91,13 @@ export function silentCue(correct: boolean): Cue {
 }
 
 // An answer in Notes or Speed (§6.1, §6.2): on a miss the tapped note — none
-// for a Speed timeout — then the correct note resolving. A right answer
+// for a Speed timeout — then the correct note resolving `way`. A right answer
 // plays just the correct note resolving.
-export function noteFeedbackCue(played: number, tapped: Degree | null): Cue {
+export function noteFeedbackCue(
+  played: number,
+  tapped: Degree | null,
+  way: Resolve = 'closest',
+): Cue {
   const notes: CueNote[] = []
   let at = 0
   const note = (position: number, durationMs: number) =>
@@ -93,7 +106,7 @@ export function noteFeedbackCue(played: number, tapped: Degree | null): Cue {
     note(besideOf(played, tapped), FEEDBACK_NOTE_MS)
     at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
   }
-  const tonic = resolveToTonic(played)
+  const tonic = resolveToTonic(played, way)
   if (tonic === null) {
     note(played, RESOLVE_HOLD_MS)
   } else {

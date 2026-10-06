@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   averageGrade,
+  gradeBelow,
   averageStar,
   EMPTY_DEGREE_STATS,
   emptyStatsMap,
@@ -125,5 +126,18 @@ describe('emptyStatsMap', () => {
     const map = emptyStatsMap()
     expect(Object.keys(map)).toHaveLength(12)
     expect(map[11]).toEqual(EMPTY_DEGREE_STATS)
+  })
+})
+
+describe('gradeBelow', () => {
+  it('compares against the bar', () => {
+    expect(gradeBelow('C', 'B')).toBe(true)
+    expect(gradeBelow('B', 'B')).toBe(false)
+    expect(gradeBelow('A', 'D')).toBe(false)
+    expect(gradeBelow('F', 'D')).toBe(true)
+  })
+
+  it('counts no grade yet as below', () => {
+    expect(gradeBelow(null, 'D')).toBe(true)
   })
 })

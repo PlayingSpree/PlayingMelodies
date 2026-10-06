@@ -4,7 +4,7 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.7.0** (2026-10-05). Revision history lives in
+Spec version: **0.10.0** (2026-10-06). Revision history lives in
 [CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
 sequencing is intentionally left outside this document.
 
@@ -237,8 +237,19 @@ The core drill, and the only mode that unlocks anything. Deals the preset's
   does it want to go" cue drone methods teach with — and then advances.
 - Which answers get those **feedback notes** is a setting (§7.5): misses only
   (the default), every answer — a right answer then plays the correct note
-  resolving — or never. Silent feedback holds a miss ~2 s, long enough to find
-  the correct key on the pad.
+  resolving — **low grades**, or never. Low grades plays on every miss and on a
+  right answer to a degree graded below a chosen bar (B, C or D; B by default),
+  read as it stood before the answer; an ungraded degree counts as below, since
+  it is still being learned. Speed reads the same Notes grade — stars rate speed,
+  not knowing — and Melody reads the preset's melody grade (§6.3). Silent
+  feedback holds a miss ~2 s, long enough to find the correct key on the pad.
+- Which tonic the correct note **resolves to** is a setting too: **closest** (the
+  default) lets ♭2–4 fall to the 1 below and ♯4–7 rise to the 1 above; **up** and
+  **down** always go that way, so the pull toward each tonic can be heard on its
+  own; **alternate** starts each session up and switches every few resolves (1–10,
+  default every one); **random** picks up or down each time. The resolve stays in
+  the note's octave, and a played 1 is held rather than resolved — it doesn't
+  count toward alternate's switch.
 - While feedback plays, each note's pad key **lights up as it sounds**, so every
   sound can be matched to its key (§7.3). Prompts never light a key: that would
   give the answer away.
@@ -338,9 +349,14 @@ Melody) or stars earned (Speed); the goal line.
 
 ### 7.5 Settings
 
-Drone volume, note volume, feedback notes after every answer / misses only /
-never (§6.1, default misses only), register (1 / 2 / 3 octaves), daily goal
-minutes (default 10), JSON export/import, and reset progress per preset.
+Drone volume, note volume; feedback notes after every answer / low grades /
+misses only / never, and which way they resolve — closest / up / down /
+alternate / random (§6.1, defaults misses only and closest); register (1 / 2 / 3
+octaves), daily goal minutes (default 10), JSON export/import, and reset
+progress per preset.
+
+- Low grades' bar and alternate's switch count only show while their option is
+  picked.
 
 - A **test sound** sets the volumes by ear: the drone with a few degrees taking
   turns over it, until it's stopped or Settings closes. The volumes are otherwise
