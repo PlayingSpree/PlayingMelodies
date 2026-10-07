@@ -10,6 +10,13 @@ produced it.
 
 ---
 
+## 0.12.0 — 2026-10-07
+
+**A key cue plays 1–5–1 when a tonic comes in.** At Start, on each tonic change
+and on Resume, the 1, the 5 and the octave 1 play on the tonic in place of the
+settle pause, their pad keys lit as they sound, then a short gap before the
+prompt. A setting turns it off, on by default (§3.2, §7.3, §7.5).
+
 ## 0.11.0 — 2026-10-07
 
 **A session pauses in the background.** When the app is hidden mid-session, the

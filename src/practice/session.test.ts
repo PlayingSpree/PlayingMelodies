@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { degreeAt, getPreset, type Degree } from '../theory'
-import { RIGHT_FEEDBACK_MS, SILENT_MISS_MS, type Cue } from './cues'
+import { keyCue, RIGHT_FEEDBACK_MS, SILENT_MISS_MS, type Cue } from './cues'
 import type { Rng } from './dealer'
 import type { PracticeSlice } from './grading'
 import { freshProgress, type PresetProgress } from './progress'
@@ -8,6 +8,7 @@ import {
   advance,
   CROSSFADE_MS,
   endSession,
+  KEY_CUE_DELAY_MS,
   pause,
   replay,
   resume,
@@ -56,11 +57,14 @@ const ALL_PASSED = practiceWith({
   passed: [...MAJOR.order],
 })
 
+// The key cue is off unless asked for, so a session settles in the plain
+// SETTLE_MS.
 function start(
   options: Partial<SessionOptions> = {},
   practice = practiceWith(),
   seed = 1,
   feedback: Partial<FeedbackSettings> = {},
+  keyCue = false,
 ): SessionStep {
   return startSession(
     {
@@ -68,6 +72,7 @@ function start(
       options: { ...DEFAULT_SESSION_OPTIONS, ...options },
       register: 1,
       feedback: { ...feedbackSettings(DEFAULT_SETTINGS), ...feedback },
+      keyCue,
     },
     practice,
     0,
@@ -293,6 +298,67 @@ describe('tonic changes', () => {
     }
     expect(step.state.tonic).toBe(2)
     expect(step.state.phase.kind).toBe('answering')
+  })
+})
+
+describe('key cue', () => {
+  const cued = (options: Partial<SessionOptions> = {}) =>
+    start(options, practiceWith(), 1, {}, true)
+  const cue = keyCue()
+
+  // The wake that plays the cue: its notes, then one to open the prompt.
+  function expectCue(step: SessionStep): void {
+    expect(step.state.phase.kind).toBe('settling')
+    expect(step.effects).toEqual([
+      { kind: 'play', tonicMidi: tonicMidi(step.state.tonic), cue },
+      { kind: 'wake', call: 'advance', inMs: cue.lengthMs },
+    ])
+  }
+
+  it('plays 1–5–1 from a wake after Start, then the prompt', () => {
+    const { state, effects } = cued()
+    // Nothing plays with the Start tap: the audio may not be running yet.
+    expect(effects).toEqual([
+      { kind: 'startDrone', tonicMidi: tonicMidi(state.tonic) },
+      { kind: 'wake', call: 'advance', inMs: KEY_CUE_DELAY_MS },
+    ])
+    const played = advance(state, KEY_CUE_DELAY_MS)
+    expectCue(played)
+    const opened = advance(played.state, KEY_CUE_DELAY_MS + cue.lengthMs)
+    expect(opened.state.phase.kind).toBe('answering')
+  })
+
+  it('plays on the new tonic after the crossfade', () => {
+    const cuedStart = cued({ tonicChangeEvery: 10 }).state
+    let step = advance(advance(cuedStart, 0).state, 0)
+    let now = 0
+    for (let i = 0; i < 10; i++) {
+      now += 1000
+      step = answerRight(step.state, now)
+    }
+    const { tonic } = step.state
+    expect(step.effects).toEqual([
+      {
+        kind: 'retuneDrone',
+        tonicMidi: tonicMidi(tonic),
+        fadeMs: CROSSFADE_MS,
+      },
+      { kind: 'wake', call: 'advance', inMs: CROSSFADE_MS + KEY_CUE_DELAY_MS },
+    ])
+    expectCue(advance(step.state, now))
+  })
+
+  it('plays again on Resume before the held prompt', () => {
+    const { state } = advance(advance(cued().state, 0).state, 0)
+    const resumed = resume(pause(state).state, 60_000)
+    expect(resumed.effects).toEqual([
+      { kind: 'startDrone', tonicMidi: tonicMidi(state.tonic) },
+      { kind: 'wake', call: 'advance', inMs: KEY_CUE_DELAY_MS },
+    ])
+    const played = advance(resumed.state, 61_000)
+    expectCue(played)
+    const reopened = advance(played.state, 64_000)
+    expect(prompt(reopened.state)).toEqual(prompt(state))
   })
 })
 

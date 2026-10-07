@@ -41,6 +41,7 @@ export interface Settings {
   feedbackBelow: FeedbackBar
   resolveDirection: ResolveDirection
   alternateEvery: number // 1–MAX_ALTERNATE_EVERY resolves
+  keyCue: boolean // 1–5–1 when a tonic comes in (§3.2)
 }
 
 // What a session needs to know about feedback.
@@ -58,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   feedbackBelow: 'B',
   resolveDirection: 'closest',
   alternateEvery: 1,
+  keyCue: true,
 }
 
 export function feedbackSettings(settings: Settings): FeedbackSettings {
@@ -112,5 +114,6 @@ export function sanitizeSettings(value: unknown): Settings {
       MAX_ALTERNATE_EVERY,
       d.alternateEvery,
     ),
+    keyCue: typeof raw.keyCue === 'boolean' ? raw.keyCue : d.keyCue,
   }
 }

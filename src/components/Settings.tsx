@@ -1,7 +1,7 @@
 // Settings (DESIGN.md §7.5): drone and note volume with a test sound to set
 // them by, which answers play feedback notes and which way they resolve,
-// register, the daily goal, JSON export/import of everything stored, and
-// reset progress per preset.
+// register, the key cue, the daily goal, JSON export/import of everything
+// stored, and reset progress per preset.
 // Reached from Home only, so nothing here runs mid-session.
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -297,8 +297,11 @@ function goalDown(minutes: number): number {
   )
 }
 
+const ON_OFF = ['on', 'off'] as const
+
 function PracticeSection() {
   const register = useSettings((s) => s.settings.register)
+  const keyCue = useSettings((s) => s.settings.keyCue)
   const goal = useSettings((s) => s.settings.goalMinutes)
   const update = useSettings((s) => s.update)
   return (
@@ -309,6 +312,13 @@ function PracticeSection() {
         value={register}
         name={(octaves) => `${octaves} octave${octaves === 1 ? '' : 's'}`}
         onChange={(octaves) => update({ register: octaves })}
+      />
+      <Choice
+        label="1–5–1 when a key starts"
+        choices={ON_OFF}
+        value={keyCue ? 'on' : 'off'}
+        name={(choice) => (choice === 'on' ? 'On' : 'Off')}
+        onChange={(choice) => update({ keyCue: choice === 'on' })}
       />
       <Stepper
         label="Daily goal"

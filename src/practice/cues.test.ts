@@ -3,6 +3,10 @@ import {
   besideOf,
   FEEDBACK_NOTE_MS,
   FEEDBACK_STEP_MS,
+  KEY_CUE_GAP_MS,
+  KEY_CUE_HOLD_MS,
+  KEY_CUE_STEP_MS,
+  keyCue,
   melodyFeedbackCue,
   promptCue,
   resolveToTonic,
@@ -131,5 +135,21 @@ describe('melodyFeedbackCue', () => {
 
   it('only replays a clean melody', () => {
     expect(positions(melodyFeedbackCue([0, 2], [0, 2], 'fast'))).toEqual([0, 2])
+  })
+})
+
+describe('keyCue', () => {
+  it('plays 1, 5 and the octave 1, then a gap', () => {
+    const cue = keyCue()
+    expect(positions(cue)).toEqual([0, 7, 12])
+    expect(cue.notes.map((note) => note.atMs)).toEqual([
+      0,
+      KEY_CUE_STEP_MS,
+      2 * KEY_CUE_STEP_MS,
+    ])
+    expect(cue.notes[2]?.durationMs).toBe(KEY_CUE_HOLD_MS)
+    expect(cue.lengthMs).toBe(
+      2 * KEY_CUE_STEP_MS + KEY_CUE_HOLD_MS + KEY_CUE_GAP_MS,
+    )
   })
 })

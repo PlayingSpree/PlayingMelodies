@@ -86,6 +86,25 @@ export function promptCue(positions: readonly number[], tempo: Tempo): Cue {
   }
 }
 
+// The key cue (§3.2): 1, 5 and the octave 1 over a new tonic, so the key is
+// heard before the first prompt on it.
+export const KEY_CUE_POSITIONS = [0, 7, 12] as const
+export const KEY_CUE_STEP_MS = 500
+export const KEY_CUE_HOLD_MS = 1000
+export const KEY_CUE_GAP_MS = 1000
+
+export function keyCue(): Cue {
+  const last = KEY_CUE_POSITIONS.length - 1
+  return {
+    notes: KEY_CUE_POSITIONS.map((position, i) => ({
+      position,
+      atMs: i * KEY_CUE_STEP_MS,
+      durationMs: i === last ? KEY_CUE_HOLD_MS : KEY_CUE_STEP_MS,
+    })),
+    lengthMs: last * KEY_CUE_STEP_MS + KEY_CUE_HOLD_MS + KEY_CUE_GAP_MS,
+  }
+}
+
 export function silentCue(correct: boolean): Cue {
   return { notes: [], lengthMs: correct ? RIGHT_FEEDBACK_MS : SILENT_MISS_MS }
 }

@@ -47,6 +47,7 @@ function play(
       options: { ...DEFAULT_SESSION_OPTIONS, ...options },
       register: 1,
       feedback: feedbackSettings(DEFAULT_SETTINGS),
+      keyCue: false,
     },
     slice,
     t,

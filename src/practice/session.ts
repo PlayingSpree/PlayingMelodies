@@ -13,6 +13,7 @@
 //                       answering ◀──advance (next prompt)─┤
 //                            done ◀──advance (length met)──┘
 //
+// With the key cue on, settling advances once more first, to play it.
 // Any of the first three can `pause` (§6) and `resume` back to settling: an
 // open prompt is held and plays again after the settle.
 
@@ -20,6 +21,7 @@ import { degreeAt, type Degree, type Preset } from '../theory'
 import type { RegisterOctaves } from '../theory'
 import { IDLE_CLOCK, touchActivity, type ActivityClock } from './activeTime'
 import {
+  keyCue,
   melodyFeedbackCue,
   noteFeedbackCue,
   promptCue,
@@ -41,12 +43,17 @@ import { pickTonic, tonicMidi } from './tonic'
 // first note on a tonic is heard against it and not the old one (§3.2).
 export const SETTLE_MS = 2000
 export const CROSSFADE_MS = 2000
+// With the key cue on, it replaces the settle pause, playing this long after
+// the drone has come in (§3.2).
+export const KEY_CUE_DELAY_MS = 1000
 
 export interface SessionSetup {
   preset: Preset
   options: SessionOptions
   register: RegisterOctaves
   feedback: FeedbackSettings
+  // 1–5–1 on each tonic before its first prompt (§3.2, §7.5).
+  keyCue: boolean
 }
 
 // One graded prompt, for the Report.
@@ -68,8 +75,9 @@ export interface HeldPrompt {
 
 // The phases a session runs through, and so can pause in.
 export type LivePhase =
-  // `held` replaces the next deal, after a resume.
-  | { kind: 'settling'; held?: HeldPrompt }
+  // `held` replaces the next deal, after a resume. `cueDue`: the key cue
+  // plays at the next advance, before the prompt.
+  | { kind: 'settling'; held?: HeldPrompt; cueDue?: true }
   | {
       kind: 'answering'
       prompt: number[] // positions; one outside Melody
@@ -131,8 +139,8 @@ export function startSession(
     throw new Error(`${options.mode} is not open in ${preset.name}`)
   }
   const tonic = pickTonic(options.tonicLock, null, rng)
-  return {
-    state: {
+  const { state, effects } = settle(
+    {
       setup,
       practice,
       startPractice: practice,
@@ -146,10 +154,11 @@ export function startSession(
       activity: touchActivity(IDLE_CLOCK, nowMs),
       resolves: 0,
     },
-    effects: [
-      { kind: 'startDrone', tonicMidi: tonicMidi(tonic) },
-      { kind: 'wake', call: 'advance', inMs: SETTLE_MS },
-    ],
+    0,
+  )
+  return {
+    state,
+    effects: [{ kind: 'startDrone', tonicMidi: tonicMidi(tonic) }, ...effects],
   }
 }
 
@@ -189,6 +198,44 @@ function dealPrompt(state: SessionState, rng: Rng): number[] {
 
 function play(state: SessionState, cue: Cue): SessionEffect {
   return { kind: 'play', tonicMidi: tonicMidi(state.tonic), cue }
+}
+
+// Waits out a settling state's settle, the drone given `leadMs` to get to
+// the tonic first — the crossfade, on a tonic change. Then `advance` opens
+// the prompt, or with the key cue on, plays 1–5–1 and opens it after that
+// (§3.2). The cue waits for a wake of its own rather than going out with the
+// drone: the tap that starts the drone may be what starts the audio, and
+// notes sent before it runs are dropped.
+function settle(state: SessionState, leadMs: number): SessionStep {
+  const { phase } = state
+  if (phase.kind !== 'settling' || !state.setup.keyCue) {
+    return {
+      state,
+      effects: [{ kind: 'wake', call: 'advance', inMs: leadMs + SETTLE_MS }],
+    }
+  }
+  return {
+    state: { ...state, phase: { ...phase, cueDue: true } },
+    effects: [
+      { kind: 'wake', call: 'advance', inMs: leadMs + KEY_CUE_DELAY_MS },
+    ],
+  }
+}
+
+// The key cue, once its wait is over; the prompt follows its gap.
+function playKeyCue(state: SessionState, held?: HeldPrompt): SessionStep {
+  const next: SessionState = {
+    ...state,
+    phase: held ? { kind: 'settling', held } : { kind: 'settling' },
+  }
+  const cue = keyCue()
+  return {
+    state: next,
+    effects: [
+      play(next, cue),
+      { kind: 'wake', call: 'advance', inMs: cue.lengthMs },
+    ],
+  }
 }
 
 // Opens a prompt — a fresh deal, or one held by a pause — and plays it. The
@@ -234,7 +281,8 @@ function finish(state: SessionState): SessionStep {
   }
 }
 
-// Called when a wait ends: the settle pause, or a feedback cue.
+// Called when a wait ends: the settle pause, the key cue's wait or the cue
+// itself, or a feedback cue.
 export function advance(
   state: SessionState,
   nowMs: number,
@@ -242,7 +290,8 @@ export function advance(
 ): SessionStep {
   switch (state.phase.kind) {
     case 'settling': {
-      const { held } = state.phase
+      const { held, cueDue } = state.phase
+      if (cueDue) return playKeyCue(state, held)
       return held
         ? openPrompt(state, held, nowMs)
         : nextPrompt(state, nowMs, rng)
@@ -250,21 +299,24 @@ export function advance(
     case 'feedback': {
       if (lengthMet(state)) return finish(state)
       if (!tonicChangeDue(state)) return nextPrompt(state, nowMs, rng)
-      const tonic = pickTonic(null, state.tonic, rng)
-      return {
-        state: {
+      const settled = settle(
+        {
           ...state,
-          tonic,
+          tonic: pickTonic(null, state.tonic, rng),
           answersOnTonic: 0,
           phase: { kind: 'settling' },
         },
+        CROSSFADE_MS,
+      )
+      return {
+        state: settled.state,
         effects: [
           {
             kind: 'retuneDrone',
-            tonicMidi: tonicMidi(tonic),
+            tonicMidi: tonicMidi(settled.state.tonic),
             fadeMs: CROSSFADE_MS,
           },
-          { kind: 'wake', call: 'advance', inMs: CROSSFADE_MS + SETTLE_MS },
+          ...settled.effects,
         ],
       }
     }
@@ -503,14 +555,18 @@ export function resume(
       : from.kind === 'settling'
         ? from.held
         : undefined
-  return {
-    state: {
+  const settled = settle(
+    {
       ...next,
       phase: held ? { kind: 'settling', held } : { kind: 'settling' },
     },
+    0,
+  )
+  return {
+    state: settled.state,
     effects: [
       { kind: 'startDrone', tonicMidi: tonicMidi(next.tonic) },
-      { kind: 'wake', call: 'advance', inMs: SETTLE_MS },
+      ...settled.effects,
     ],
   }
 }

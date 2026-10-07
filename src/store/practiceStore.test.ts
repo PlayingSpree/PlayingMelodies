@@ -3,6 +3,7 @@ import {
   CROSSFADE_MS,
   DEFAULT_SESSION_OPTIONS,
   DEFAULT_SETTINGS,
+  KEY_CUE_DELAY_MS,
   localDateKey,
   RIGHT_FEEDBACK_MS,
   SETTLE_MS,
@@ -36,7 +37,11 @@ function allPassed(id: PresetId): PresetProgress {
   }
 }
 
-function setup(progress?: PresetProgress, settings = DEFAULT_SETTINGS) {
+// The key cue off, so a session settles in the plain SETTLE_MS; its own
+// tests turn it on.
+const NO_KEY_CUE: Settings = { ...DEFAULT_SETTINGS, keyCue: false }
+
+function setup(progress?: PresetProgress, settings = NO_KEY_CUE) {
   const storage = memoryStorage()
   if (progress) {
     storage.update((state) => ({
@@ -150,7 +155,7 @@ describe('practiceStore', () => {
   })
 
   it('starts sessions with the feedback notes setting', () => {
-    const settings: Settings = { ...DEFAULT_SETTINGS, feedbackSound: 'all' }
+    const settings: Settings = { ...NO_KEY_CUE, feedbackSound: 'all' }
     const t = setup(undefined, settings)
     t.start()
     vi.advanceTimersByTime(SETTLE_MS)
@@ -195,6 +200,27 @@ describe('practiceStore', () => {
     }
     const last = notes.at(-1)!
     vi.advanceTimersByTime(last.durationMs)
+    expect(sounding()).toBeNull()
+  })
+
+  it('lights the key cue’s keys, and keeps them lit through a stray tap', () => {
+    const t = setup(undefined, DEFAULT_SETTINGS)
+    t.start()
+    expect(t.callsOf('play')).toHaveLength(0)
+    vi.advanceTimersByTime(KEY_CUE_DELAY_MS)
+    const [, , cue] = t.callsOf('play')[0]!
+    const { notes, lengthMs } = cue as Cue
+    const sounding = () => t.store.getState().sounding
+    // Checked just after each note starts: a timer set from inside another
+    // fires a tick later under fake timers.
+    vi.advanceTimersByTime(notes[0]!.atMs + 1)
+    expect(sounding()).toBe(0)
+    vi.advanceTimersByTime(notes[1]!.atMs - notes[0]!.atMs)
+    expect(sounding()).toBe(7)
+    t.store.getState().tap(3)
+    expect(sounding()).toBe(7)
+    vi.advanceTimersByTime(lengthMs - notes[1]!.atMs)
+    expect(t.phase()?.kind).toBe('answering')
     expect(sounding()).toBeNull()
   })
 

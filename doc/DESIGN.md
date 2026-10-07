@@ -113,6 +113,14 @@ just presets choosing which degrees to drill.
   tonic is random and always differs from the old one. The drone **crossfades** to
   it over ~2 s, then a ~2 s **settle pause** passes before the next prompt — the
   first note on a new tonic is otherwise heard against the old one.
+- **Key cue** (setting, default on): wherever a tonic comes in — Start, each
+  change, and Resume, which restarts the drone (§6) — **1–5–1** plays on it in
+  place of the settle pause: once the drone is in, the 1 at the bottom of the
+  register, the 5 and the 1 an octave up, held, then a ~1 s gap before the
+  prompt. The drone alone gives the key; hearing it spelled out first takes the
+  guessing out of the first prompt after a change. Each note's pad key lights as
+  it sounds, as in feedback (§6.1) — 1 and 5 open every preset (§4), so this
+  gives nothing away.
 - Otherwise the drone never stops for the whole session, including between prompts
   and under feedback.
 
@@ -354,8 +362,8 @@ presets and modes.
 - Above the pad: replay, the session's progress, and — in Speed — the time limit
   draining; in Melody, the answer slots and undo.
 - After an answer the pad keeps the tapped key marked right or wrong, and on a
-  miss outlines the correct one; during feedback the key whose note is sounding
-  lights up (§6.1).
+  miss outlines the correct one; during feedback and the key cue the key whose
+  note is sounding lights up (§3.2, §6.1).
 - While a session is paused (§6), a cover with **Resume** hides everything but the
   top bar, so Quit still works.
 
@@ -370,8 +378,8 @@ Melody) or stars earned (Speed); the goal line.
 Drone volume, note volume; feedback notes after every answer / low grades /
 misses only / never, and which way they resolve — closest / up / down /
 alternate / random (§6.1, defaults misses only and closest); register (1 / 2 / 3
-octaves), daily goal minutes (default 10), JSON export/import, and reset
-progress per preset.
+octaves); the key cue on / off (§3.2, default on); daily goal minutes (default
+10), JSON export/import, and reset progress per preset.
 
 - Low grades' bar and alternate's switch count only show while their option is
   picked.

@@ -2,8 +2,9 @@
 // for the screens, and the session in progress. It drives the pure session
 // runner — each action calls a runner step, keeps the new state, and carries
 // out the step's effects: audio through Sound, waits as timers that call the
-// runner back, and during feedback which pad key is sounding. After every step it writes what changed through to storage:
-// the records when an answer was graded, and new active time to today.
+// runner back, and during feedback and the key cue which pad key is sounding.
+// After every step it writes what changed through to storage: the records
+// when an answer was graded, and new active time to today.
 
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
@@ -48,8 +49,9 @@ export interface PracticeStoreState {
   // The session sheet's last choices, saved with each start. Its mode is also
   // Home's open tab, saved as soon as the tab changes (§7.1).
   lastOptions: SessionOptions
-  // The degree whose feedback note is sounding now, lit on the pad so each
-  // sound can be matched to its key (§6.1). Prompts never light one.
+  // The degree whose feedback or key cue note is sounding now, lit on the
+  // pad so each sound can be matched to its key (§3.2, §6.1). Prompts never
+  // light one.
   sounding: Degree | null
 
   // Must be called synchronously from the Start tap's handler: starting the
@@ -82,6 +84,12 @@ export interface PracticeStoreDeps {
   settings?: () => Settings
   now?: () => number
   rng?: Rng
+}
+
+// The phases whose notes light their keys: feedback and the key cue, which
+// plays while settling. A prompt plays in 'answering' and lights nothing.
+function lights(phase: SessionState['phase']['kind']): boolean {
+  return phase === 'feedback' || phase === 'settling'
 }
 
 function recordsOf(state: PersistedState): PracticeRecords {
@@ -149,7 +157,7 @@ export function createPracticeStore({
             break
           case 'play':
             sound.play(effect.tonicMidi, effect.cue)
-            if (phase === 'feedback') lightNotes(effect.cue)
+            if (lights(phase)) lightNotes(effect.cue)
             break
           case 'wake':
             if (effect.call === 'advance') {
@@ -202,7 +210,7 @@ export function createPracticeStore({
       const { state, effects } = run(before)
       set({ session: state })
       persist(before, state)
-      if (state.phase.kind !== 'feedback') set({ sounding: null })
+      if (!lights(state.phase.kind)) set({ sounding: null })
       // A paused or finished session needs no more callbacks.
       if (state.phase.kind === 'paused' || state.phase.kind === 'done') {
         clearTimers()
@@ -226,9 +234,15 @@ export function createPracticeStore({
           confusions: records.confusions,
           progress: records.presetProgress[presetId] ?? freshProgress(preset),
         }
-        const { register } = settings()
+        const { register, keyCue } = settings()
         const { state, effects } = startSession(
-          { preset, options, register, feedback: feedbackSettings(settings()) },
+          {
+            preset,
+            options,
+            register,
+            feedback: feedbackSettings(settings()),
+            keyCue,
+          },
           practice,
           now(),
           rng,

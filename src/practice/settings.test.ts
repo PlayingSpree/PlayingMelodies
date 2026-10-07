@@ -17,6 +17,7 @@ describe('sanitizeSettings', () => {
       feedbackBelow: 'D',
       resolveDirection: 'alternate',
       alternateEvery: 10,
+      keyCue: false,
     }
     expect(sanitizeSettings(settings)).toEqual(settings)
   })
@@ -32,6 +33,7 @@ describe('sanitizeSettings', () => {
         feedbackBelow: 'A',
         resolveDirection: 'sideways',
         alternateEvery: 11,
+        keyCue: 'yes',
       }),
     ).toEqual({ ...DEFAULT_SETTINGS, noteVolume: 0.3 })
   })
@@ -42,6 +44,7 @@ describe('sanitizeSettings', () => {
       feedbackBelow: __,
       resolveDirection: ___,
       alternateEvery: ____,
+      keyCue: _____,
       ...older
     } = DEFAULT_SETTINGS
     expect(sanitizeSettings({ ...older, register: 2 })).toEqual({
