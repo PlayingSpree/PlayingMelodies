@@ -3,6 +3,7 @@ import {
   DEFAULT_SESSION_OPTIONS,
   DEFAULT_SETTINGS,
   EMPTY_DEGREE_STATS,
+  emptyStatsMap,
 } from '../practice'
 import {
   defaultState,
@@ -10,6 +11,7 @@ import {
   sanitizeDailyRecords,
   sanitizeDegreeStatsMap,
   sanitizePresetProgress,
+  sanitizePresetStatsMap,
   sanitizePresetProgressMap,
   sanitizeState,
   SCHEMA_VERSION,
@@ -24,15 +26,16 @@ describe('sanitizeState', () => {
     const state = {
       version: SCHEMA_VERSION,
       settings: { ...DEFAULT_SETTINGS, register: 2 },
-      degreeStats: {
-        ...defaultState().degreeStats,
-        4: { outcomes: [true, false], speedTimesMs: [1200] },
+      presetStats: {
+        major: {
+          ...emptyStatsMap(),
+          4: { outcomes: [true, false], speedTimesMs: [1200] },
+        },
       },
-      confusions: [{ played: 4, tapped: 5 }],
+      confusions: [{ preset: 'major', played: 4, tapped: 5 }],
       presetProgress: {
         major: {
           unlockedCount: 3,
-          passWindows: { 0: [true, true, true, true, true], 4: [false] },
           passed: [0, 7],
           melodyOutcomes: [true],
         },
@@ -69,16 +72,30 @@ describe('sanitizeDegreeStatsMap', () => {
   })
 })
 
+describe('sanitizePresetStatsMap', () => {
+  it('keeps known presets only, each filled out', () => {
+    const map = sanitizePresetStatsMap({
+      minor: { 3: { outcomes: [true] } },
+      dorian: { 3: { outcomes: [true] } },
+    })
+    expect(Object.keys(map)).toEqual(['minor'])
+    expect(map.minor?.[3]).toEqual({ outcomes: [true], speedTimesMs: [] })
+    expect(map.minor?.[0]).toEqual(EMPTY_DEGREE_STATS)
+  })
+})
+
 describe('sanitizeConfusions', () => {
-  it('drops entries that are not two different degrees', () => {
+  it('drops entries that are not two different degrees in a known preset', () => {
     expect(
       sanitizeConfusions([
-        { played: 4, tapped: 5, extra: 1 },
-        { played: 4, tapped: 4 },
-        { played: 4, tapped: 12 },
+        { preset: 'major', played: 4, tapped: 5, extra: 1 },
+        { preset: 'major', played: 4, tapped: 4 },
+        { preset: 'major', played: 4, tapped: 12 },
+        { preset: 'dorian', played: 4, tapped: 5 },
+        { played: 4, tapped: 5 },
         'junk',
       ]),
-    ).toEqual([{ played: 4, tapped: 5 }])
+    ).toEqual([{ preset: 'major', played: 4, tapped: 5 }])
   })
 })
 
@@ -86,7 +103,6 @@ describe('sanitizePresetProgress', () => {
   it('opens a fresh preset for junk', () => {
     expect(sanitizePresetProgress('major', null)).toEqual({
       unlockedCount: 2,
-      passWindows: {},
       passed: [],
       melodyOutcomes: [],
     })
@@ -122,14 +138,12 @@ describe('sanitizePresetProgress', () => {
     ).toEqual({})
   })
 
-  it('keeps passes and pass windows only for open degrees', () => {
+  it('keeps passes only for open degrees', () => {
     // Major opens 1 5 3 at a count of 3; 4 is not open yet.
     const progress = sanitizePresetProgress('major', {
       unlockedCount: 3,
-      passWindows: { 0: [true], 5: [true] },
       passed: [7, 5, 7, 'x'],
     })
-    expect(progress.passWindows).toEqual({ 0: [true] })
     expect(progress.passed).toEqual([7])
   })
 })

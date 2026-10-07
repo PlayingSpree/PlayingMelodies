@@ -30,6 +30,7 @@ import {
   type Cue,
   type Resolve,
 } from './cues'
+import { presetConfusions } from './confusions'
 import { dealDegree, placeDegree, type Rng } from './dealer'
 import { gradeAnswer, type Answer, type PracticeSlice } from './grading'
 import { generateMelody } from './melody'
@@ -190,7 +191,7 @@ function dealPrompt(state: SessionState, rng: Rng): number[] {
     pool,
     recent,
     practice.degreeStats,
-    practice.confusions,
+    presetConfusions(practice.confusions, preset.id),
     rng,
   )
   return [placeDegree(degree, register, rng)]

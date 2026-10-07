@@ -15,7 +15,7 @@ function fresh(): PracticeSlice {
 }
 
 describe('gradeAnswer: Notes', () => {
-  it('feeds the grade window and the pass window', () => {
+  it('feeds the grade window, which passing reads', () => {
     const result = gradeAnswer(MAJOR, fresh(), {
       mode: 'notes',
       played: 19, // 5, an octave up
@@ -23,7 +23,6 @@ describe('gradeAnswer: Notes', () => {
     })
     expect(result.correct).toBe(true)
     expect(result.practice.degreeStats[7].outcomes).toEqual([true])
-    expect(result.practice.progress.passWindows[7]).toEqual([true])
     expect(result.practice.confusions).toEqual([])
   })
 
@@ -35,7 +34,9 @@ describe('gradeAnswer: Notes', () => {
     })
     expect(result.correct).toBe(false)
     expect(result.practice.degreeStats[7].outcomes).toEqual([false])
-    expect(result.practice.confusions).toEqual([{ played: 7, tapped: 0 }])
+    expect(result.practice.confusions).toEqual([
+      { preset: 'major', played: 7, tapped: 0 },
+    ])
   })
 
   it('reports a pass and the unlock it opens', () => {
@@ -90,7 +91,9 @@ describe('gradeAnswer: Speed', () => {
     expect(result.practice.degreeStats[4].speedTimesMs).toEqual([
       SPEED_LIMIT_MS,
     ])
-    expect(result.practice.confusions).toEqual([{ played: 4, tapped: 5 }])
+    expect(result.practice.confusions).toEqual([
+      { preset: 'major', played: 4, tapped: 5 },
+    ])
   })
 
   it('records a timeout as the full limit, with no confusion', () => {
@@ -117,7 +120,9 @@ describe('gradeAnswer: Melody', () => {
     expect(result.correct).toBe(false)
     expect(result.slots).toEqual([true, false, true])
     expect(result.practice.progress.melodyOutcomes).toEqual([false])
-    expect(result.practice.confusions).toEqual([{ played: 2, tapped: 4 }])
+    expect(result.practice.confusions).toEqual([
+      { preset: 'major', played: 2, tapped: 4 },
+    ])
     expect(result.practice.degreeStats).toEqual(emptyStatsMap())
   })
 })

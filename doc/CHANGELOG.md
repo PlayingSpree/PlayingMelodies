@@ -10,6 +10,18 @@ produced it.
 
 ---
 
+## 0.13.0 — 2026-10-07
+
+**Stats and confusions are per preset.** Grades and stars are kept per preset,
+then per degree, instead of once per degree for every preset, so a grade earned
+in Major no longer stands for Chromatic. The confusion log tags each entry with
+its preset, and the dealer reads only the current preset's. Passing reads the
+newest 5 of the preset's grade window instead of a separate pass window, which
+now held the same answers. A preset reset clears its stats and confusions too.
+Schema v2: the shared v1 stats, the confusions and the pass windows are dropped
+(a pass partway done starts over); unlocks, passes, daily time and settings
+carry over (§4, §5, §7.5, §8, §9).
+
 ## 0.12.0 — 2026-10-07
 
 **A key cue plays 1–5–1 when a tonic comes in.** At Start, on each tonic change

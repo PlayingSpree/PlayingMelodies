@@ -1,8 +1,8 @@
 // Per-preset unlock progress (DESIGN.md §4) and the mode gates it drives
 // (§6). A fresh preset opens its starting degrees; once every open degree has
-// passed, the next one opens. Passing reads the preset's *own* window of
-// Notes answers, not the shared stats (§5), so a degree passed in Major still
-// has to be passed again in Chromatic. Pure TS.
+// passed, the next one opens. Passing reads the newest end of the degree's
+// Notes outcomes in the preset (§4, §5), so a degree passed in Major still has
+// to be passed again in Chromatic. Pure TS.
 
 import type { Degree, Preset } from '../theory'
 import {
@@ -19,6 +19,7 @@ import {
 
 // A degree passes at PASS_REQUIRED right among its last PASS_WINDOW Notes
 // answers in the preset — a full window, so 4 straight right isn't enough.
+// The grade's outcome window holds them: it is longer, and per preset too.
 export const PASS_WINDOW = 5
 export const PASS_REQUIRED = 4
 
@@ -31,9 +32,6 @@ export const MELODY_WINDOW = 10
 export interface PresetProgress {
   // How many of the preset's degrees are open, counted along its order.
   unlockedCount: number
-  // The last PASS_WINDOW Notes outcomes of each degree answered in this
-  // preset, oldest first. Absent means none yet.
-  passWindows: Readonly<Partial<Record<Degree, readonly boolean[]>>>
   // A latch: a degree that slips afterwards stays passed (§4).
   passed: readonly Degree[]
   melodyOutcomes: readonly boolean[]
@@ -42,7 +40,6 @@ export interface PresetProgress {
 export function freshProgress(preset: Preset): PresetProgress {
   return {
     unlockedCount: Math.min(preset.startUnlocked, preset.order.length),
-    passWindows: {},
     passed: [],
     melodyOutcomes: [],
   }
@@ -77,26 +74,21 @@ export interface NotesAnswerResult {
   newlyUnlocked: Degree[]
 }
 
-// Records one graded Notes answer (§6.1) against the preset. An answer for a
-// degree that isn't open changes nothing — Notes never deals one.
+// Records one graded Notes answer (§6.1) against the preset: `outcomes` is
+// the degree's Notes outcome window in the preset, this answer included. An
+// answer for a degree that isn't open changes nothing — Notes never deals one.
 export function recordNotesAnswer(
   preset: Preset,
   progress: PresetProgress,
   degree: Degree,
-  correct: boolean,
+  outcomes: readonly boolean[],
 ): NotesAnswerResult {
   if (!unlockedDegrees(preset, progress).includes(degree)) {
     return { progress, newlyPassed: null, newlyUnlocked: [] }
   }
-  const window = pushWindow(
-    progress.passWindows[degree] ?? [],
-    correct,
-    PASS_WINDOW,
-  )
-  const passes = !progress.passed.includes(degree) && passesWindow(window)
+  const passes = !progress.passed.includes(degree) && passesWindow(outcomes)
   let next: PresetProgress = {
     ...progress,
-    passWindows: { ...progress.passWindows, [degree]: window },
     passed: passes ? [...progress.passed, degree] : progress.passed,
   }
   const newlyUnlocked: Degree[] = []

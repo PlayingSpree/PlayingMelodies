@@ -25,6 +25,32 @@ describe('migrateState', () => {
       defaultState(),
     )
   })
+
+  it('drops v1 stats, confusions and pass windows, keeping the rest', () => {
+    const progress = {
+      unlockedCount: 3,
+      passed: [0, 7],
+      melodyOutcomes: [],
+    }
+    const v1 = {
+      version: 1,
+      settings: { ...defaultState().settings, goalMinutes: 20 },
+      degreeStats: { 4: { outcomes: [true, true], speedTimesMs: [] } },
+      confusions: [{ played: 4, tapped: 5 }],
+      presetProgress: { major: { ...progress, passWindows: { 4: [true] } } },
+      dailyRecords: {
+        '2026-10-04': { date: '2026-10-04', activeMinutes: 12 },
+      },
+    }
+    const state = migrateState(v1)
+    expect(state.version).toBe(2)
+    expect(state.presetStats).toEqual({})
+    expect(state.confusions).toEqual([])
+    expect(state).not.toHaveProperty('degreeStats')
+    expect(state.settings.goalMinutes).toBe(20)
+    expect(state.presetProgress).toEqual({ major: progress })
+    expect(state.dailyRecords).toEqual(v1.dailyRecords)
+  })
 })
 
 describe('AppStorage', () => {
@@ -36,7 +62,10 @@ describe('AppStorage', () => {
   })
 
   it('loads a stored state', () => {
-    const stored = { ...defaultState(), confusions: [{ played: 0, tapped: 7 }] }
+    const stored = {
+      ...defaultState(),
+      confusions: [{ preset: 'major', played: 0, tapped: 7 }],
+    }
     const kv = memoryKV({ [STATE_STORAGE_KEY]: JSON.stringify(stored) })
     expect(new AppStorage(kv).state).toEqual(stored)
   })

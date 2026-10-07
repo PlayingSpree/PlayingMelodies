@@ -18,13 +18,15 @@ import {
 
 const major = getPreset('major') // 1 5 3 4 6 2 7
 
+// Answers `degree` with `outcomes` in turn, as its whole Notes history.
 function answer(
   progress: PresetProgress,
   degree: Degree,
   ...outcomes: boolean[]
 ): PresetProgress {
   return outcomes.reduce(
-    (p, correct) => recordNotesAnswer(major, p, degree, correct).progress,
+    (p, _, i) =>
+      recordNotesAnswer(major, p, degree, outcomes.slice(0, i + 1)).progress,
     progress,
   )
 }
@@ -74,7 +76,13 @@ describe('freshProgress', () => {
 describe('recordNotesAnswer', () => {
   it('passes a degree at 4 of its last 5', () => {
     const progress = answer(freshProgress(major), 0, true, false, true, true)
-    const result = recordNotesAnswer(major, progress, 0, true)
+    const result = recordNotesAnswer(major, progress, 0, [
+      true,
+      false,
+      true,
+      true,
+      true,
+    ])
     expect(result.newlyPassed).toBe(0)
     expect(result.progress.passed).toEqual([0])
     expect(result.newlyUnlocked).toEqual([])
@@ -86,7 +94,7 @@ describe('recordNotesAnswer', () => {
       major,
       answer(progress, 7, true, true, true, true),
       7,
-      true,
+      FIVE_RIGHT,
     )
     expect(result.newlyPassed).toBe(7)
     expect(result.newlyUnlocked).toEqual([4])
@@ -105,12 +113,14 @@ describe('recordNotesAnswer', () => {
 
   it('reports a pass only once', () => {
     const progress = answer(freshProgress(major), 0, ...FIVE_RIGHT)
-    expect(recordNotesAnswer(major, progress, 0, true).newlyPassed).toBeNull()
+    expect(
+      recordNotesAnswer(major, progress, 0, [...FIVE_RIGHT, true]).newlyPassed,
+    ).toBeNull()
   })
 
   it('ignores a degree that is not open', () => {
     const progress = freshProgress(major)
-    const result = recordNotesAnswer(major, progress, 4, true)
+    const result = recordNotesAnswer(major, progress, 4, FIVE_RIGHT)
     expect(result.progress).toBe(progress)
   })
 
@@ -125,9 +135,14 @@ describe('recordNotesAnswer', () => {
     expect(all.passed).toHaveLength(major.order.length)
   })
 
-  it('keeps its pass windows to this preset', () => {
-    const progress = answer(freshProgress(major), 0, ...FIVE_RIGHT, false)
-    expect(progress.passWindows[0]).toEqual([true, true, true, true, false])
+  it('passes on the newest 5 of a longer window', () => {
+    const result = recordNotesAnswer(major, freshProgress(major), 0, [
+      false,
+      false,
+      false,
+      ...FIVE_RIGHT,
+    ])
+    expect(result.newlyPassed).toBe(0)
   })
 })
 

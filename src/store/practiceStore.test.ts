@@ -3,6 +3,7 @@ import {
   CROSSFADE_MS,
   DEFAULT_SESSION_OPTIONS,
   DEFAULT_SETTINGS,
+  emptyStatsMap,
   KEY_CUE_DELAY_MS,
   localDateKey,
   RIGHT_FEEDBACK_MS,
@@ -31,7 +32,6 @@ function allPassed(id: PresetId): PresetProgress {
   const { order } = getPreset(id)
   return {
     unlockedCount: order.length,
-    passWindows: {},
     passed: [...order],
     melodyOutcomes: [],
   }
@@ -142,12 +142,11 @@ describe('practiceStore', () => {
     t.answerRight()
 
     expect(t.phase()?.kind).toBe('feedback')
-    const stored = t.storage.state.degreeStats[played]
+    const stored = t.storage.state.presetStats.major?.[played]
     expect(stored?.outcomes).toEqual([true])
-    expect(t.store.getState().records.degreeStats[played]).toEqual(stored)
-    expect(t.storage.state.presetProgress.major?.passWindows[played]).toEqual([
-      true,
-    ])
+    expect(t.store.getState().records.presetStats.major?.[played]).toEqual(
+      stored,
+    )
 
     vi.advanceTimersByTime(RIGHT_FEEDBACK_MS)
     expect(t.phase()?.kind).toBe('answering')
@@ -332,7 +331,7 @@ describe('practiceStore', () => {
 
     const answer = t.store.getState().session?.answers[0]
     expect(answer).toMatchObject({ correct: false, tapped: [], timeMs: null })
-    expect(t.storage.state.degreeStats[played]?.speedTimesMs).toEqual([
+    expect(t.storage.state.presetStats.major?.[played]?.speedTimesMs).toEqual([
       SPEED_LIMIT_MS,
     ])
   })
@@ -429,26 +428,36 @@ describe('practiceStore', () => {
     t.start()
     const practice = t.store.getState().session?.practice
     expect(practice?.degreeStats[played]?.outcomes).toEqual([true])
-    expect(practice?.progress.passWindows[played]).toEqual([true])
   })
 
-  it('resets one preset to fresh, leaving the others and the shared stats', () => {
+  it('resets one preset to fresh, stats and confusions too, leaving the others', () => {
     const t = setup(allPassed('major'))
+    const minorStats = {
+      ...emptyStatsMap(),
+      3: { outcomes: [true], speedTimesMs: [] },
+    }
     t.storage.update((state) => ({
       ...state,
       presetProgress: { ...state.presetProgress, minor: allPassed('minor') },
+      presetStats: { major: emptyStatsMap(), minor: minorStats },
+      confusions: [
+        { preset: 'major', played: 4, tapped: 5 },
+        { preset: 'minor', played: 3, tapped: 5 },
+      ],
     }))
-    t.start()
-    vi.advanceTimersByTime(SETTLE_MS)
-    const played = degreeAt(t.prompt()[0]!)
-    t.answerRight()
-    t.store.getState().close()
 
     t.store.getState().resetPreset('major')
     const { records } = t.store.getState()
     expect(records.presetProgress.major).toBeUndefined()
     expect(records.presetProgress.minor).toEqual(allPassed('minor'))
-    expect(records.degreeStats[played].outcomes).toEqual([true])
+    expect(records.presetStats).toEqual({ minor: minorStats })
+    expect(records.confusions).toEqual([
+      { preset: 'minor', played: 3, tapped: 5 },
+    ])
+    expect(t.storage.state).toMatchObject({
+      presetStats: { minor: minorStats },
+      confusions: [{ preset: 'minor', played: 3, tapped: 5 }],
+    })
     expect(t.storage.state.presetProgress.major).toBeUndefined()
   })
 

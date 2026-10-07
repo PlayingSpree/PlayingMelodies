@@ -4,7 +4,7 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.10.0** (2026-10-06). Revision history lives in
+Spec version: **0.13.0** (2026-10-07). Revision history lives in
 [CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
 sequencing is intentionally left outside this document.
 
@@ -20,8 +20,8 @@ sequencing is intentionally left outside this document.
 - **Presets:** Major, Minor and Chromatic (all 12 degrees), each unlocking
   flashcard-style — a few degrees open, 1 more each time everything open has
   passed (§4).
-- **Stats are per degree**, independent of tonic and octave; unlock progress is per
-  preset (§5).
+- **Stats and progress are per preset**; stats are per degree within it,
+  independent of tonic and octave (§4, §5).
 - Client-side only: an installable, offline PWA persisting to `localStorage`, with
   JSON export/import (§2).
 
@@ -162,14 +162,13 @@ first session; Chromatic starts with 3 and ♭3, the contrast it exists to drill
   whole preset is open.
 - A degree **passes** when **4 of its last 5** Notes answers *in that preset* are
   right — far above guessing (with 3 degrees open, a random tap is right a third
-  of the time). The preset keeps its own 5-answer window per degree for this,
-  apart from the shared stats (§5), and it must be full: 4 straight right isn't
-  yet a pass.
+  of the time). It reads the newest 5 of the degree's Notes outcomes in the
+  preset (§5) and needs all 5: 4 straight right isn't yet a pass.
 - Passing is a **latch**: a degree that later slips stays passed and its unlocks
   stay open; the live grade is shown elsewhere.
 - **Progress is per preset.** Telling 3 from 4 and 5 is easier than telling it from
-  ♭3 too, so a pass in Major proves nothing about Chromatic. Stats, by contrast, are
-  shared (§5).
+  ♭3 too, so a pass in Major proves nothing about Chromatic. Stats are per preset
+  for the same reason (§5).
 - Only **Notes** answers count toward passing — not Speed, not Melody (§6).
 - Progress can be reset per preset in Settings.
 
@@ -177,18 +176,20 @@ first session; Chromatic starts with 3 and ♭3, the contrast it exists to drill
 
 ## 5. Stats, Grades & Weighting
 
-**Keyed per degree only** — 12 records, shared by every preset. The tonic and the
-octave a note was played in are deliberately not part of the key: relative pitch is
-meant to be one skill on every tonic, and splitting by tonic would spread the data
-over 144 slow-filling records. (Should one tonic ever seem to misbehave, it can be
-answered from the answer log without changing the key.)
+**Keyed per preset, then per degree.** A grade in Major is earned with fewer
+neighbors to mistake a degree for than in Chromatic, so shared stats would let
+the easy preset vouch for the hard one — the reason progress is per preset too
+(§4). The tonic and the octave a note was played in are deliberately not part of
+the key: relative pitch is meant to be one skill on every tonic, and splitting by
+tonic would spread each preset's data 12 ways into slow-filling records. (Should
+one tonic ever seem to misbehave, it can be answered from the answer log without
+changing the key.)
 
 Per degree:
 - **Notes outcomes** — the last 10 right/wrong results. The **grade** is a letter
   from accuracy over that window: **A ≥ 90 %, B ≥ 80 %, C ≥ 70 %, D ≥ 60 %, F
-  below**, shown as "—" until 5 answers exist. Passing doesn't read this window:
-  it reads the preset's own (§4), or answers given in Major would pass a degree
-  the moment Chromatic unlocked it.
+  below**, shown as "—" until 5 answers exist. Passing reads the newest 5 of the
+  same window (§4).
 - **Speed times** — the last 10 Speed-mode times, a miss or timeout counted as the
   full 5 s limit, so a fast wrong tap can't earn anything. The **star** is from their
   median: **gold < 1 s, silver < 2 s, bronze < 3 s**, none from 3 s up, and none
@@ -216,9 +217,13 @@ Rounding down keeps one weak degree from hiding behind the rest. These are
 summaries of the stats above, not new records: melody notes still rate no degree.
 
 **Confusions.** Every wrong answer, in any mode, is logged as a **(played, tapped)
-pair**. Hearing two degrees side by side is how they're told apart, so when the
-dealer weights a missed degree up, it weights the degree it was mistaken for up
-too. The Report surfaces the top pairs (§7.4).
+pair**, tagged with the preset it was given in. Hearing two degrees side by side
+is how they're told apart, so when the dealer weights a missed degree up, it
+weights the degree it was mistaken for up too — reading only the current
+preset's entries, like the stats: a 3 mistaken for ♭3 in Chromatic says nothing
+about Major, which has no ♭3. The log is still one list, newest last, so entries
+keep their order across presets for anything that reads them together. The
+Report surfaces the session's top pairs (§7.4).
 
 **Weighting.** Notes and Speed deal from the eligible degrees with subtle bias
 toward recent misses and their confusion partners, never excluding any degree.
@@ -391,9 +396,9 @@ octaves); the key cue on / off (§3.2, default on); daily goal minutes (default
 - **Export/import** covers everything stored — stats, progress, daily time and
   settings — since this device holds the only copy (§2). An import replaces all
   of it, so it asks first.
-- **Reset** opens a preset fresh: its unlocks, passes and melody window start
-  over. The shared stats (§5) and daily time stay — they belong to every preset,
-  and clearing them would wipe 1 and 5 in the others too. It asks first.
+- **Reset** opens a preset fresh: its unlocks, passes, melody window, stats and
+  confusions start over. Daily time stays — it belongs to every preset. It asks
+  first.
 
 ---
 
@@ -410,12 +415,14 @@ notes, ported from PlayingChord's `piano.ts`; a new sustained voice for the dron
 which must not decay) can be swapped for sampled sounds later without touching the
 rest.
 
-**Persisted shapes:** a per-degree stat record (Notes outcome window, Speed time
-window), the confusion log of (played, tapped) pairs, a per-preset progress record
-(unlocked count, a 5-answer pass window per degree, passed degrees, melody
-outcome window), daily records (date, active minutes), settings and the session
-sheet's last choices, whose mode doubles as Home's open tab. Schema-versioned
-from the start.
+**Persisted shapes:** per preset, a stat record per degree (Notes outcome window,
+Speed time window); the confusion log of (preset, played, tapped) entries; a
+per-preset progress record (unlocked count, passed degrees, melody outcome
+window); daily records (date, active minutes); settings and the session sheet's
+last choices, whose mode doubles as Home's open tab. Schema-versioned
+from the start. v2 made stats and confusions per preset; v1's shared ones can't be
+split after the fact, so the migration drops them, along with v1's separate pass
+windows, and keeps everything else.
 
 ---
 
@@ -432,3 +439,7 @@ from the start.
 3. **Grade speed?** — *Separately, as stars, in its own mode.* Notes never times the
    player; Speed has a fixed limit and stars that can't be confused with letter
    grades or affect passing.
+4. **Stats shared, or per preset?** — *Per preset.* Sharing them filled grades
+   faster, but a degree graded A among Major's 7 hadn't earned it among
+   Chromatic's 12. Stars and confusions split the same way, so every rating a
+   preset shows was earned in it.

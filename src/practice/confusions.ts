@@ -1,23 +1,41 @@
 // The confusion log (DESIGN.md §5): every wrong answer, in any mode, as the
-// degree played and the degree tapped. The dealer reads its recent end to
-// deal confused degrees together; the Report reads its top pairs. Pure TS.
+// degree played and the degree tapped, tagged with the preset it was given
+// in. The dealer reads the recent end of its own preset's entries to deal
+// confused degrees together; the Report reads a session's top pairs. Pure TS.
 
-import type { Degree } from '../theory'
+import type { Degree, PresetId } from '../theory'
 
 export interface Confusion {
   played: Degree
   tapped: Degree
 }
 
+// One entry in the persisted log.
+export interface LoggedConfusion extends Confusion {
+  preset: PresetId
+}
+
 // Kept newest-last and capped, so the persisted log can't grow without
-// bound. Far more than the dealer or a session's Report ever reads.
+// bound. One log for every preset, so it still reads in order across them.
 export const CONFUSION_LOG_SIZE = 200
 
 export function recordConfusion(
-  log: readonly Confusion[],
-  confusion: Confusion,
-): Confusion[] {
+  log: readonly LoggedConfusion[],
+  confusion: LoggedConfusion,
+): LoggedConfusion[] {
   return [...log, confusion].slice(-CONFUSION_LOG_SIZE)
+}
+
+// The log's entries for one preset, oldest first. Confusions stay with their
+// preset like the stats do (§5): mixing 3 up with ♭3 in Chromatic says
+// nothing about Major, which has no ♭3.
+export function presetConfusions(
+  log: readonly LoggedConfusion[],
+  preset: PresetId,
+): Confusion[] {
+  return log
+    .filter((entry) => entry.preset === preset)
+    .map(({ played, tapped }) => ({ played, tapped }))
 }
 
 // A confused pair, lower degree first. Pairs are counted both ways round:

@@ -472,8 +472,8 @@ function ResetSection() {
   return (
     <Section label="Reset progress">
       <p className="text-sm text-ink-soft">
-        A reset relocks a preset to its starting degrees. Grades, stars and
-        daily time are shared by every preset and stay.
+        A reset relocks a preset to its starting degrees and clears its grades,
+        stars and mix-ups. Daily time and streaks stay.
       </p>
       {PRESETS.map((preset) => (
         <ResetRow
@@ -503,7 +503,7 @@ function ResetRow({
   if (confirming) {
     return (
       <Confirm
-        message={`Reset ${preset.name}? Its unlocks and passes start over.`}
+        message={`Reset ${preset.name}? Its unlocks, passes and stats start over.`}
         action="Reset"
         onConfirm={() => {
           practiceStore.getState().resetPreset(preset.id)

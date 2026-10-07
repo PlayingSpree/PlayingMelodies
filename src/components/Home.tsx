@@ -18,6 +18,7 @@ import {
   presetGrade,
   presetStar,
   starOf,
+  statsOf,
   windowGrade,
   type Grade,
   type Mode,
@@ -137,7 +138,7 @@ function PresetCard({
   mode: Mode
   onOpen: () => void
 }) {
-  const stats = usePractice((s) => s.records.degreeStats)
+  const stats = usePractice((s) => statsOf(s.records.presetStats, preset.id))
   // Defaulted outside the selector: a fresh object per call would re-render
   // forever.
   const progress =

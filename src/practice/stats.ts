@@ -1,8 +1,8 @@
-// Per-degree stats (DESIGN.md §5): the shared Notes outcome window behind the
-// letter grade and the Speed time window behind the star. Keyed by degree
-// only — every preset, tonic and octave feeds the same 12 records. Pure TS.
+// Per-degree stats (DESIGN.md §5): the Notes outcome window behind the letter
+// grade and the Speed time window behind the star. Kept per preset, then per
+// degree — every tonic and octave feeds the same record. Pure TS.
 
-import { DEGREES, type Degree } from '../theory'
+import { DEGREES, type Degree, type PresetId } from '../theory'
 
 // Both windows keep the last 10 answers, oldest first.
 export const OUTCOME_WINDOW = 10
@@ -32,6 +32,19 @@ export function emptyStatsMap(): DegreeStatsMap {
   const map = {} as Record<Degree, DegreeStats>
   for (const degree of DEGREES) map[degree] = EMPTY_DEGREE_STATS
   return map
+}
+
+// A shared empty map, for reading a preset with no stats yet.
+export const EMPTY_STATS_MAP: DegreeStatsMap = emptyStatsMap()
+
+// Each preset's stats. Absent means the preset has none yet.
+export type PresetStatsMap = Readonly<Partial<Record<PresetId, DegreeStatsMap>>>
+
+export function statsOf(
+  stats: PresetStatsMap,
+  preset: PresetId,
+): DegreeStatsMap {
+  return stats[preset] ?? EMPTY_STATS_MAP
 }
 
 // Appends to a window, dropping the oldest entries past `size`.

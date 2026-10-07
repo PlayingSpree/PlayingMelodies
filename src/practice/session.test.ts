@@ -192,7 +192,11 @@ describe('Notes', () => {
     const play = step.effects.find((effect) => effect.kind === 'play')
     expect(play?.kind === 'play' && play.cue.notes.length).toBeGreaterThan(2)
     expect(step.state.practice.confusions).toEqual([
-      { played: playedDegree(state), tapped: wrongDegree(state) },
+      {
+        preset: 'major',
+        played: playedDegree(state),
+        tapped: wrongDegree(state),
+      },
     ])
   })
 
@@ -448,7 +452,7 @@ describe('Melody', () => {
     step = tap(step.state, melody[2] ?? 0, 3200)
     expect(step.state.answers[0]?.slots).toEqual([true, false, true])
     expect(step.state.practice.confusions).toEqual([
-      { played: melody[1], tapped: wrong },
+      { preset: 'major', played: melody[1], tapped: wrong },
     ])
   })
 

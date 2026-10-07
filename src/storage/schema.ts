@@ -1,4 +1,4 @@
-// The versioned localStorage schema (DESIGN.md §8), currently v1. Pure TS:
+// The versioned localStorage schema (DESIGN.md §8), currently v2. Pure TS:
 // the persisted shape, its defaults, and sanitizers that coerce unknown data
 // (hand-edited, stale, corrupted, imported) into a valid state field by field,
 // so one bad record never costs the player the rest. Reading and writing
@@ -13,17 +13,17 @@ import {
   freshProgress,
   MELODY_WINDOW,
   OUTCOME_WINDOW,
-  PASS_WINDOW,
   sanitizeSessionOptions,
   sanitizeSettings,
   SPEED_LIMIT_MS,
   SPEED_WINDOW,
-  type Confusion,
   type DailyRecord,
   type DailyRecords,
   type DegreeStats,
   type DegreeStatsMap,
+  type LoggedConfusion,
   type PresetProgress,
+  type PresetStatsMap,
   type SessionOptions,
   type Settings,
 } from '../practice'
@@ -31,12 +31,14 @@ import {
   DEGREES,
   getPreset,
   isDegree,
+  isPresetId,
   PRESET_IDS,
   type Degree,
   type PresetId,
 } from '../theory'
 
-export const SCHEMA_VERSION = 1
+// v2 keeps stats and confusions per preset (spec 0.13.0); v1 shared them.
+export const SCHEMA_VERSION = 2
 
 // The single versioned key. The version lives *inside* the payload, so a
 // migration reads one blob, checks `version` and upgrades in a chain.
@@ -45,8 +47,9 @@ export const STATE_STORAGE_KEY = 'playingmelodies:state'
 export interface PersistedState {
   version: typeof SCHEMA_VERSION
   settings: Settings
-  degreeStats: DegreeStatsMap
-  confusions: readonly Confusion[]
+  // Absent means the preset has no stats yet.
+  presetStats: PresetStatsMap
+  confusions: readonly LoggedConfusion[]
   // Absent means the preset was never played: it opens fresh.
   presetProgress: Readonly<Partial<Record<PresetId, PresetProgress>>>
   dailyRecords: DailyRecords
@@ -58,7 +61,7 @@ export function defaultState(): PersistedState {
   return {
     version: SCHEMA_VERSION,
     settings: DEFAULT_SETTINGS,
-    degreeStats: emptyStatsMap(),
+    presetStats: {},
     confusions: [],
     presetProgress: {},
     dailyRecords: {},
@@ -115,21 +118,33 @@ export function sanitizeDegreeStatsMap(value: unknown): DegreeStatsMap {
   return map
 }
 
-function isConfusion(value: unknown): value is Confusion {
+export function sanitizePresetStatsMap(value: unknown): PresetStatsMap {
+  const raw = asRecord(value)
+  const map: Partial<Record<PresetId, DegreeStatsMap>> = {}
+  for (const id of PRESET_IDS) {
+    if (id in raw) map[id] = sanitizeDegreeStatsMap(raw[id])
+  }
+  return map
+}
+
+function isConfusion(value: unknown): value is LoggedConfusion {
   const raw = asRecord(value)
   return (
-    isDegree(raw.played) && isDegree(raw.tapped) && raw.played !== raw.tapped
+    isPresetId(raw.preset) &&
+    isDegree(raw.played) &&
+    isDegree(raw.tapped) &&
+    raw.played !== raw.tapped
   )
 }
 
-export function sanitizeConfusions(value: unknown): Confusion[] {
+export function sanitizeConfusions(value: unknown): LoggedConfusion[] {
   return sanitizeWindow(value, isConfusion, CONFUSION_LOG_SIZE).map(
-    ({ played, tapped }) => ({ played, tapped }),
+    ({ preset, played, tapped }) => ({ preset, played, tapped }),
   )
 }
 
 // A preset's record, held to its own invariants: the unlocked count within
-// the preset, and pass windows and passes only for degrees that are open.
+// the preset, and passes only for degrees that are open.
 export function sanitizePresetProgress(
   id: PresetId,
   value: unknown,
@@ -144,21 +159,9 @@ export function sanitizePresetProgress(
       : fresh.unlockedCount
   const open = preset.order.slice(0, unlockedCount)
 
-  const rawWindows = asRecord(raw.passWindows)
-  const passWindows: Partial<Record<Degree, boolean[]>> = {}
-  for (const degree of open) {
-    if (degree in rawWindows) {
-      passWindows[degree] = sanitizeWindow(
-        rawWindows[degree],
-        isBoolean,
-        PASS_WINDOW,
-      )
-    }
-  }
   const rawPassed = new Set(asArray(raw.passed))
   return {
     unlockedCount,
-    passWindows,
     passed: open.filter((degree) => rawPassed.has(degree)),
     melodyOutcomes: sanitizeWindow(
       raw.melodyOutcomes,
@@ -195,12 +198,12 @@ export function sanitizeDailyRecords(value: unknown): DailyRecords {
   return records
 }
 
-// A v1 payload, field by field.
+// A v2 payload, field by field.
 export function sanitizeState(raw: Record<string, unknown>): PersistedState {
   return {
     version: SCHEMA_VERSION,
     settings: sanitizeSettings(raw.settings),
-    degreeStats: sanitizeDegreeStatsMap(raw.degreeStats),
+    presetStats: sanitizePresetStatsMap(raw.presetStats),
     confusions: sanitizeConfusions(raw.confusions),
     presetProgress: sanitizePresetProgressMap(raw.presetProgress),
     dailyRecords: sanitizeDailyRecords(raw.dailyRecords),

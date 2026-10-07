@@ -1,19 +1,40 @@
 import { describe, expect, it } from 'vitest'
 import {
   CONFUSION_LOG_SIZE,
+  presetConfusions,
   recordConfusion,
   topConfusions,
   type Confusion,
+  type LoggedConfusion,
 } from './confusions'
 
 describe('recordConfusion', () => {
   it('appends newest last and caps the log', () => {
-    let log: Confusion[] = []
+    let log: LoggedConfusion[] = []
     for (let i = 0; i < CONFUSION_LOG_SIZE + 5; i++) {
-      log = recordConfusion(log, { played: 4, tapped: i % 2 === 0 ? 5 : 3 })
+      log = recordConfusion(log, {
+        preset: 'major',
+        played: 4,
+        tapped: i % 2 === 0 ? 5 : 3,
+      })
     }
     expect(log).toHaveLength(CONFUSION_LOG_SIZE)
-    expect(log.at(-1)).toEqual({ played: 4, tapped: 5 })
+    expect(log.at(-1)).toEqual({ preset: 'major', played: 4, tapped: 5 })
+  })
+})
+
+describe('presetConfusions', () => {
+  it("keeps only the preset's entries, in order", () => {
+    const log: LoggedConfusion[] = [
+      { preset: 'major', played: 4, tapped: 5 },
+      { preset: 'chromatic', played: 3, tapped: 4 },
+      { preset: 'major', played: 11, tapped: 0 },
+    ]
+    expect(presetConfusions(log, 'major')).toEqual([
+      { played: 4, tapped: 5 },
+      { played: 11, tapped: 0 },
+    ])
+    expect(presetConfusions(log, 'minor')).toEqual([])
   })
 })
 

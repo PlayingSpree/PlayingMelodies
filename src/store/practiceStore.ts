@@ -16,6 +16,7 @@ import {
   feedbackSettings,
   freshProgress,
   localDateKey,
+  statsOf,
   pause,
   replay,
   resume,
@@ -39,7 +40,7 @@ import { settingsStore } from './settingsStore'
 
 export type PracticeRecords = Pick<
   PersistedState,
-  'degreeStats' | 'confusions' | 'presetProgress' | 'dailyRecords'
+  'presetStats' | 'confusions' | 'presetProgress' | 'dailyRecords'
 >
 
 export interface PracticeStoreState {
@@ -71,7 +72,7 @@ export interface PracticeStoreState {
   close(): void
 
   // Settings (§7.5), offered from Home only, never mid-session. A reset opens
-  // the preset fresh; the shared stats stay (§4, §5).
+  // the preset fresh and clears its stats and confusions (§4, §5).
   resetPreset(presetId: PresetId): void
   // Replaces everything stored with an imported backup, the session sheet's
   // last choices included. The settings store must reload after it.
@@ -93,8 +94,8 @@ function lights(phase: SessionState['phase']['kind']): boolean {
 }
 
 function recordsOf(state: PersistedState): PracticeRecords {
-  const { degreeStats, confusions, presetProgress, dailyRecords } = state
-  return { degreeStats, confusions, presetProgress, dailyRecords }
+  const { presetStats, confusions, presetProgress, dailyRecords } = state
+  return { presetStats, confusions, presetProgress, dailyRecords }
 }
 
 export function createPracticeStore({
@@ -184,7 +185,7 @@ export function createPracticeStore({
           const { degreeStats, confusions, progress } = after.practice
           next = {
             ...next,
-            degreeStats,
+            presetStats: { ...next.presetStats, [presetId]: degreeStats },
             confusions,
             presetProgress: { ...next.presetProgress, [presetId]: progress },
           }
@@ -230,7 +231,7 @@ export function createPracticeStore({
         const preset = getPreset(presetId)
         const { records } = get()
         const practice: PracticeSlice = {
-          degreeStats: records.degreeStats,
+          degreeStats: statsOf(records.presetStats, presetId),
           confusions: records.confusions,
           progress: records.presetProgress[presetId] ?? freshProgress(preset),
         }
@@ -290,8 +291,15 @@ export function createPracticeStore({
 
       resetPreset(presetId) {
         storage.update((state) => {
-          const { [presetId]: _reset, ...presetProgress } = state.presetProgress
-          return { ...state, presetProgress }
+          const { [presetId]: _progress, ...presetProgress } =
+            state.presetProgress
+          const { [presetId]: _stats, ...presetStats } = state.presetStats
+          return {
+            ...state,
+            presetProgress,
+            presetStats,
+            confusions: state.confusions.filter((c) => c.preset !== presetId),
+          }
         })
         set({ records: recordsOf(storage.state) })
       },

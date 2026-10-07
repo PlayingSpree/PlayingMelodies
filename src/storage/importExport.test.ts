@@ -6,7 +6,9 @@ describe('state export/import', () => {
   it('round-trips the whole state', () => {
     const state = {
       ...defaultState(),
-      confusions: [{ played: 4 as const, tapped: 5 as const }],
+      confusions: [
+        { preset: 'major' as const, played: 4 as const, tapped: 5 as const },
+      ],
       dailyRecords: {
         '2026-10-04': { date: '2026-10-04', activeMinutes: 12 },
       },
@@ -21,7 +23,7 @@ describe('state export/import', () => {
     const json = JSON.stringify({
       kind: EXPORT_KIND,
       version: SCHEMA_VERSION,
-      confusions: [{ played: 4, tapped: 4 }],
+      confusions: [{ preset: 'major', played: 4, tapped: 4 }],
     })
     expect(parseStateImport(json)).toEqual({ ok: true, state: defaultState() })
   })

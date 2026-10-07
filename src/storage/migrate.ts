@@ -1,6 +1,5 @@
-// Migration into the current schema version (DESIGN.md §8). There is only v1
-// so far; the hook exists from the first persisted byte so later schema churn
-// stays cheap — upgrades chain here (v1 → v2 → …) before the final sanitize.
+// Migration into the current schema version (DESIGN.md §8). Upgrades chain
+// here (v1 → v2 → …) before the final sanitize.
 
 import {
   defaultState,
@@ -15,8 +14,19 @@ import {
 // refuses a newer file before it gets here (importExport.ts).
 export function migrateState(raw: unknown): PersistedState {
   if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
-    const state = raw as Record<string, unknown>
+    let state = raw as Record<string, unknown>
+    if (state.version === 1) state = fromV1(state)
     if (state.version === SCHEMA_VERSION) return sanitizeState(state)
   }
   return defaultState()
+}
+
+// v1 → v2: stats and confusions went from shared to per preset (§5). The
+// shared ones can't be split after the fact, so they are dropped and every
+// preset's stats start empty; progress, daily time and settings carry over.
+// v1's per-preset pass windows went too — passing now reads the stats — so
+// the sanitizer drops them, and with them any pass a degree was partway to.
+function fromV1(state: Record<string, unknown>): Record<string, unknown> {
+  const { degreeStats: _stats, confusions: _confusions, ...rest } = state
+  return { ...rest, version: 2, presetStats: {}, confusions: [] }
 }

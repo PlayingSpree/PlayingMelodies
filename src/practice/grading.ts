@@ -1,10 +1,14 @@
 // Grading one answer into the player's records (DESIGN.md §4–§6.3): which
-// mode feeds what. Notes feeds the grade window and the preset's pass window;
+// mode feeds what. Notes feeds the grade window, which passing reads too;
 // Speed feeds only the star window; Melody feeds only the preset's melody
 // window. Every wrong note, in any mode, feeds the confusion log. Pure TS.
 
-import { degreeAt, type Degree, type Preset } from '../theory'
-import { recordConfusion, type Confusion } from './confusions'
+import { degreeAt, type Degree, type Preset, type PresetId } from '../theory'
+import {
+  recordConfusion,
+  type Confusion,
+  type LoggedConfusion,
+} from './confusions'
 import { checkMelody } from './melody'
 import {
   recordMelodyOutcome,
@@ -17,10 +21,12 @@ import {
   type DegreeStatsMap,
 } from './stats'
 
-// The part of the persisted state a session reads and writes, for its preset.
+// The part of the persisted state a session reads and writes, for its preset:
+// the preset's stats and progress, and the whole confusion log, which every
+// preset shares (its entries are tagged with theirs).
 export interface PracticeSlice {
   degreeStats: DegreeStatsMap
-  confusions: readonly Confusion[]
+  confusions: readonly LoggedConfusion[]
   progress: PresetProgress
 }
 
@@ -45,10 +51,14 @@ export interface GradeResult {
 }
 
 function withConfusions(
-  log: readonly Confusion[],
+  log: readonly LoggedConfusion[],
+  preset: PresetId,
   confusions: readonly Confusion[],
-): readonly Confusion[] {
-  return confusions.reduce(recordConfusion, log)
+): readonly LoggedConfusion[] {
+  return confusions.reduce(
+    (next, confusion) => recordConfusion(next, { ...confusion, preset }),
+    log,
+  )
 }
 
 export function gradeAnswer(
@@ -61,7 +71,11 @@ export function gradeAnswer(
     return {
       practice: {
         ...practice,
-        confusions: withConfusions(practice.confusions, check.confusions),
+        confusions: withConfusions(
+          practice.confusions,
+          preset.id,
+          check.confusions,
+        ),
         progress: recordMelodyOutcome(practice.progress, check.clean),
       },
       correct: check.clean,
@@ -79,6 +93,7 @@ export function gradeAnswer(
       : recordConfusion(practice.confusions, {
           played,
           tapped: answer.tapped,
+          preset: preset.id,
         })
   const stats = practice.degreeStats[played]
 
@@ -99,14 +114,17 @@ export function gradeAnswer(
     }
   }
 
-  const unlock = recordNotesAnswer(preset, practice.progress, played, correct)
+  const recorded = recordNotesOutcome(stats, correct)
+  const unlock = recordNotesAnswer(
+    preset,
+    practice.progress,
+    played,
+    recorded.outcomes,
+  )
   return {
     practice: {
       confusions,
-      degreeStats: {
-        ...practice.degreeStats,
-        [played]: recordNotesOutcome(stats, correct),
-      },
+      degreeStats: { ...practice.degreeStats, [played]: recorded },
       progress: unlock.progress,
     },
     correct,
