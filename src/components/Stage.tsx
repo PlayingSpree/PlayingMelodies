@@ -1,12 +1,16 @@
 // The Stage (DESIGN.md §7.3): the session's progress, replay and quit on
 // top; in the middle what the session wants now — listening, an answer, the
 // Speed limit draining, Melody's slots — or the feedback on the last answer;
-// the pad at the bottom, in reach of the thumb.
+// the pad at the bottom, in reach of the thumb. While the app is in the
+// background the session pauses, and a cover over all but the top bar waits
+// for Resume (§6).
 
+import { useEffect } from 'react'
 import {
   SPEED_LIMIT_MS,
   unlockedDegrees,
   type SessionAnswer,
+  type SessionPhase,
   type SessionState,
 } from '../practice'
 import { practiceStore, usePractice } from '../store'
@@ -16,13 +20,22 @@ import { formatMinutes } from './labels'
 import { Pad, type KeyMark } from './Pad'
 import { RaisedButton } from './ui'
 
+// Whether a prompt is open, or held open by a pause.
+function promptOpen(phase: SessionPhase): boolean {
+  if (phase.kind === 'paused') return promptOpen(phase.from)
+  return (
+    phase.kind === 'answering' ||
+    (phase.kind === 'settling' && phase.held !== undefined)
+  )
+}
+
 function progressText({ setup, answers, phase, activity }: SessionState) {
   const { length } = setup.options
   if (length.kind === 'minutes') {
     const left = Math.max(0, length.minutes - activity.activeMs / 60_000)
     return `${formatMinutes(left)} min left`
   }
-  const current = answers.length + (phase.kind === 'answering' ? 1 : 0)
+  const current = answers.length + (promptOpen(phase) ? 1 : 0)
   return `${current} / ${length.count}`
 }
 
@@ -88,6 +101,9 @@ function Status({ session }: { session: SessionState }) {
   const { phase, setup, answers } = session
   const { mode } = setup.options
 
+  // Under the paused cover.
+  if (phase.kind === 'paused') return null
+
   if (phase.kind === 'settling') {
     return <p className="text-xl font-bold text-ink-muted">Listen…</p>
   }
@@ -143,11 +159,33 @@ function Status({ session }: { session: SessionState }) {
   )
 }
 
+function PausedCover({ onResume }: { onResume: () => void }) {
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 bg-surface/90 backdrop-blur-sm">
+      <p className="text-3xl font-extrabold">Paused</p>
+      <RaisedButton variant="primary" size="lg" onClick={onResume}>
+        ▶ Resume
+      </RaisedButton>
+    </div>
+  )
+}
+
 export function Stage() {
   const session = usePractice((s) => s.session)
   const sounding = usePractice((s) => s.sounding)
+
+  useEffect(() => {
+    const onChange = () => {
+      if (document.visibilityState === 'hidden') {
+        practiceStore.getState().pause()
+      }
+    }
+    document.addEventListener('visibilitychange', onChange)
+    return () => document.removeEventListener('visibilitychange', onChange)
+  }, [])
+
   if (session === null) return null
-  const { tap, undo, replay, end } = practiceStore.getState()
+  const { tap, undo, replay, resume, end } = practiceStore.getState()
   const { setup, phase, practice } = session
   const { preset, options } = setup
 
@@ -171,29 +209,33 @@ export function Stage() {
         </RaisedButton>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-        <Status session={session} />
-      </div>
-
-      {options.mode === 'melody' && (
-        <div className="flex justify-end">
-          <RaisedButton
-            size="sm"
-            onClick={undo}
-            disabled={!answering || phase.slots.length === 0}
-          >
-            ⌫ Undo
-          </RaisedButton>
+      <div className="relative flex flex-1 flex-col gap-4">
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <Status session={session} />
         </div>
-      )}
 
-      <Pad
-        inPreset={new Set(preset.order)}
-        unlocked={new Set(unlockedDegrees(preset, practice.progress))}
-        marks={marks}
-        sounding={sounding}
-        onTap={tap}
-      />
+        {options.mode === 'melody' && (
+          <div className="flex justify-end">
+            <RaisedButton
+              size="sm"
+              onClick={undo}
+              disabled={!answering || phase.slots.length === 0}
+            >
+              ⌫ Undo
+            </RaisedButton>
+          </div>
+        )}
+
+        <Pad
+          inPreset={new Set(preset.order)}
+          unlocked={new Set(unlockedDegrees(preset, practice.progress))}
+          marks={marks}
+          sounding={sounding}
+          onTap={tap}
+        />
+
+        {phase.kind === 'paused' && <PausedCover onResume={resume} />}
+      </div>
     </div>
   )
 }

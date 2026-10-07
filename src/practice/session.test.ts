@@ -8,7 +8,9 @@ import {
   advance,
   CROSSFADE_MS,
   endSession,
+  pause,
   replay,
+  resume,
   SETTLE_MS,
   startSession,
   tap,
@@ -579,5 +581,127 @@ describe('activity', () => {
     next = tap(next, 0, 5000).state
     next = undo(next, 6000).state
     expect(next.activity.activeMs).toBe(6000)
+  })
+})
+
+describe('pausing', () => {
+  it('stops the notes and the drone, and ignores waits while paused', () => {
+    const { state } = firstPrompt({ mode: 'speed' }, ALL_PASSED)
+    const paused = pause(state)
+    expect(paused.state.phase).toEqual({ kind: 'paused', from: state.phase })
+    expect(paused.effects).toEqual([{ kind: 'silence' }, { kind: 'stopDrone' }])
+    expect(timeout(paused.state, 0).state).toBe(paused.state)
+    expect(advance(paused.state, 9000).state).toBe(paused.state)
+    expect(tap(paused.state, playedDegree(state), 9000).state.answers).toEqual(
+      [],
+    )
+    expect(pause(paused.state).state).toBe(paused.state)
+  })
+
+  it('resumes into a settle, then plays the held prompt with a fresh limit', () => {
+    const { state } = firstPrompt({ mode: 'speed' }, ALL_PASSED)
+    const resumed = resume(pause(state).state, 60_000)
+    expect(resumed.effects).toEqual([
+      { kind: 'startDrone', tonicMidi: tonicMidi(state.tonic) },
+      { kind: 'wake', call: 'advance', inMs: SETTLE_MS },
+    ])
+    expect(resumed.state.phase.kind).toBe('settling')
+
+    const now = 60_000 + SETTLE_MS
+    const reopened = advance(resumed.state, now)
+    expect(reopened.state.phase).toEqual({
+      kind: 'answering',
+      prompt: prompt(state),
+      startedMs: now,
+      deadlineMs: now + SPEED_LIMIT_MS,
+      slots: [],
+    })
+    expect(cueOf(reopened)?.notes).toMatchObject([
+      { position: prompt(state)[0] },
+    ])
+    expect(wakes(reopened.effects)).toEqual([
+      { kind: 'wake', call: 'timeout', inMs: SPEED_LIMIT_MS, prompt: 0 },
+    ])
+    const answered = tap(reopened.state, playedDegree(state), now + 700)
+    expect(answered.state.answers[0]).toMatchObject({
+      correct: true,
+      timeMs: 700,
+    })
+  })
+
+  it("keeps Melody's filled slots", () => {
+    const { state } = firstPrompt(
+      { mode: 'melody', melodyLength: 3 },
+      ALL_PASSED,
+    )
+    const first = degreeAt(prompt(state)[0] ?? 0)
+    const filled = tap(state, first, 3000).state
+    let step = resume(pause(filled).state, 9000)
+    // Paused again during the settle: the prompt is still held.
+    step = resume(pause(step.state).state, 12_000)
+    step = advance(step.state, 12_000 + SETTLE_MS)
+    expect(step.state.phase).toMatchObject({
+      kind: 'answering',
+      prompt: prompt(state),
+      slots: [first],
+    })
+  })
+
+  it('moves past feedback the pause cut off', () => {
+    const { state } = firstPrompt()
+    const answered = tap(state, playedDegree(state), 3000).state
+    const resumed = resume(pause(answered).state, 9000)
+    expect(resumed.state.phase).toEqual({ kind: 'settling' })
+    expect(resumed.state.answers).toHaveLength(1)
+    const next = advance(resumed.state, 9000 + SETTLE_MS)
+    expect(next.state.phase.kind).toBe('answering')
+    expect(next.state.answers).toHaveLength(1)
+  })
+
+  it('changes the tonic on resume when one was due', () => {
+    let step = firstPrompt({ tonicChangeEvery: 10 })
+    const first = step.state.tonic
+    let now = SETTLE_MS
+    for (let i = 0; i < 9; i++) {
+      now += 1000
+      step = answerRight(step.state, now)
+    }
+    now += 1000
+    const answered = tap(step.state, playedDegree(step.state), now).state
+    const resumed = resume(pause(answered).state, now + 5000)
+    expect(resumed.state.tonic).not.toBe(first)
+    expect(resumed.state.answersOnTonic).toBe(0)
+    expect(resumed.effects[0]).toEqual({
+      kind: 'startDrone',
+      tonicMidi: tonicMidi(resumed.state.tonic),
+    })
+  })
+
+  it('goes to the Report when the last answer was given', () => {
+    let step = firstPrompt({ length: { kind: 'prompts', count: 10 } })
+    let now = SETTLE_MS
+    for (let i = 0; i < 9; i++) {
+      now += 1000
+      step = answerRight(step.state, now)
+    }
+    const answered = tap(step.state, playedDegree(step.state), now + 1000)
+    expect(resume(pause(answered.state).state, now + 9000).state.phase).toEqual(
+      { kind: 'done' },
+    )
+  })
+
+  it('lets the player quit while paused', () => {
+    const { state } = firstPrompt()
+    expect(endSession(pause(state).state).state.phase).toEqual({
+      kind: 'done',
+    })
+  })
+
+  it('counts the Resume tap as activity, but not the pause', () => {
+    const { state } = firstPrompt()
+    const paused = pause(state).state
+    expect(paused.activity).toEqual(state.activity)
+    // The Start tap at 0, Resume 4 s later.
+    expect(resume(paused, 4000).state.activity.activeMs).toBe(4000)
   })
 })

@@ -15,7 +15,9 @@ import {
   feedbackSettings,
   freshProgress,
   localDateKey,
+  pause,
   replay,
+  resume,
   startSession,
   tap,
   timeout,
@@ -57,6 +59,10 @@ export interface PracticeStoreState {
   tap(degree: Degree): void
   undo(): void
   replay(): void
+  // The app went to the background (§6). A no-op unless a session runs.
+  pause(): void
+  // Must be called synchronously from the Resume tap's handler, like start.
+  resume(): void
   // Quit: what was answered stands, and the Report comes up.
   end(): void
   // Dismiss the Report (or abandon a session outright).
@@ -197,8 +203,10 @@ export function createPracticeStore({
       set({ session: state })
       persist(before, state)
       if (state.phase.kind !== 'feedback') set({ sounding: null })
-      // A finished session needs no more callbacks.
-      if (state.phase.kind === 'done') clearTimers()
+      // A paused or finished session needs no more callbacks.
+      if (state.phase.kind === 'paused' || state.phase.kind === 'done') {
+        clearTimers()
+      }
       carryOut(effects, state.phase.kind)
     }
 
@@ -246,6 +254,14 @@ export function createPracticeStore({
 
       replay() {
         step((s) => replay(s, now()))
+      },
+
+      pause() {
+        step(pause)
+      },
+
+      resume() {
+        step((s) => resume(s, now(), rng))
       },
 
       end() {

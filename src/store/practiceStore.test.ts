@@ -251,6 +251,52 @@ describe('practiceStore', () => {
     expect(t.callsOf('play').at(-1)![1]).toBe(newMidi)
   })
 
+  it('pauses mid-feedback: silent, dark, and nothing fires until Resume', () => {
+    const t = setup()
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS)
+    t.answerWrong()
+    vi.advanceTimersByTime(0)
+    t.store.getState().pause()
+    expect(t.phase()?.kind).toBe('paused')
+    expect(t.callsOf('stopDrone')).toHaveLength(1)
+    expect(t.store.getState().sounding).toBeNull()
+    expect(vi.getTimerCount()).toBe(0)
+
+    t.store.getState().resume()
+    expect(t.callsOf('startDrone')).toHaveLength(2)
+    expect(t.phase()?.kind).toBe('settling')
+    vi.advanceTimersByTime(SETTLE_MS)
+    expect(t.phase()?.kind).toBe('answering')
+    expect(t.store.getState().session?.answers).toHaveLength(1)
+  })
+
+  it('holds a Speed prompt through a pause and replays it on Resume', () => {
+    const t = setup(allPassed('major'))
+    t.start({ mode: 'speed' })
+    vi.advanceTimersByTime(SETTLE_MS)
+    const held = t.prompt()
+    t.store.getState().pause()
+    vi.advanceTimersByTime(60_000)
+    expect(t.store.getState().session?.answers).toHaveLength(0)
+
+    t.store.getState().resume()
+    vi.advanceTimersByTime(SETTLE_MS)
+    expect(t.prompt()).toEqual(held)
+    expect(t.callsOf('play').at(-1)![2]).toMatchObject({
+      notes: [{ position: held[0] }],
+    })
+    vi.advanceTimersByTime(SPEED_LIMIT_MS)
+    expect(t.store.getState().session?.answers[0]?.correct).toBe(false)
+  })
+
+  it('ignores a pause with no session running', () => {
+    const t = setup()
+    t.store.getState().pause()
+    expect(t.store.getState().session).toBeNull()
+    expect(t.sound.calls).toEqual([])
+  })
+
   it('a Speed prompt left unanswered times out as a miss', () => {
     const t = setup(allPassed('major'))
     t.start({ mode: 'speed' })

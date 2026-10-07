@@ -10,6 +10,15 @@ produced it.
 
 ---
 
+## 0.11.0 — 2026-10-07
+
+**A session pauses in the background.** When the app is hidden mid-session, the
+notes and the drone stop and every wait holds — feedback, the next prompt, Speed's
+limit. A Paused cover waits for a Resume tap, which restarts the drone and
+settles; an open prompt then plays again with its response time and Speed limit
+started over and Melody's filled slots kept, while cut-off feedback moves on to
+what followed it (§6, §7.3).
+
 ## 0.10.0 — 2026-10-06
 
 **Feedback notes can follow low grades and resolve a chosen way.** A fourth

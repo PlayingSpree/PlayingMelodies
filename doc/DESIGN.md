@@ -223,6 +223,22 @@ A session is started from a preset card on Home, in the mode of the tab it sits
 in (§7.1). Every mode runs over the
 drone and ends in the Report (§7.4).
 
+**Pausing.** When the app goes to the background mid-session, the session pauses:
+the notes and the drone stop and nothing moves on — no feedback runs out, no Speed
+limit drains. On return the Stage waits under a **Paused** cover for a **Resume**
+tap; it can't resume by itself, since iOS restarts audio only from a gesture (§2).
+Resume brings the drone back and settles as at Start, then:
+
+- A prompt left open **plays again**, and the response time and Speed's limit start
+  over from that playing — after time away the note is forgotten, so the time left
+  would test memory, not ear. Melody keeps the slots already filled.
+- Feedback the pause cut off is over, since its answer is already graded: what
+  would have followed it comes next — the next prompt, a tonic change, or the
+  Report.
+
+The pause earns no active time; the Resume tap counts as a tap toward the day's
+active minutes (§7.1).
+
 ### 6.1 Notes
 
 The core drill, and the only mode that unlocks anything. Deals the preset's
@@ -340,6 +356,8 @@ presets and modes.
 - After an answer the pad keeps the tapped key marked right or wrong, and on a
   miss outlines the correct one; during feedback the key whose note is sounding
   lights up (§6.1).
+- While a session is paused (§6), a cover with **Resume** hides everything but the
+  top bar, so Quit still works.
 
 ### 7.4 Report
 

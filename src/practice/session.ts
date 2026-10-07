@@ -12,6 +12,9 @@
 //      └─────── advance (tonic change) ◀──────advance──────┤
 //                       answering ◀──advance (next prompt)─┤
 //                            done ◀──advance (length met)──┘
+//
+// Any of the first three can `pause` (§6) and `resume` back to settling: an
+// open prompt is held and plays again after the settle.
 
 import { degreeAt, type Degree, type Preset } from '../theory'
 import type { RegisterOctaves } from '../theory'
@@ -57,8 +60,16 @@ export interface SessionAnswer {
   timeMs: number | null
 }
 
-export type SessionPhase =
-  | { kind: 'settling' }
+// A prompt left open by a pause, with Melody's slots as they were.
+export interface HeldPrompt {
+  prompt: number[]
+  slots: Degree[]
+}
+
+// The phases a session runs through, and so can pause in.
+export type LivePhase =
+  // `held` replaces the next deal, after a resume.
+  | { kind: 'settling'; held?: HeldPrompt }
   | {
       kind: 'answering'
       prompt: number[] // positions; one outside Melody
@@ -67,7 +78,9 @@ export type SessionPhase =
       slots: Degree[] // Melody's filled slots so far
     }
   | { kind: 'feedback'; prompt: number[]; answer: SessionAnswer }
-  | { kind: 'done' }
+
+export type SessionPhase =
+  LivePhase | { kind: 'paused'; from: LivePhase } | { kind: 'done' }
 
 export interface SessionState {
   setup: SessionSetup
@@ -178,8 +191,13 @@ function play(state: SessionState, cue: Cue): SessionEffect {
   return { kind: 'play', tonicMidi: tonicMidi(state.tonic), cue }
 }
 
-function nextPrompt(state: SessionState, nowMs: number, rng: Rng): SessionStep {
-  const prompt = dealPrompt(state, rng)
+// Opens a prompt — a fresh deal, or one held by a pause — and plays it. The
+// response clock and the Speed limit start from this playing.
+function openPrompt(
+  state: SessionState,
+  { prompt, slots }: HeldPrompt,
+  nowMs: number,
+): SessionStep {
   const speed = state.setup.options.mode === 'speed'
   const next: SessionState = {
     ...state,
@@ -188,7 +206,7 @@ function nextPrompt(state: SessionState, nowMs: number, rng: Rng): SessionStep {
       prompt,
       startedMs: nowMs,
       deadlineMs: speed ? nowMs + SPEED_LIMIT_MS : null,
-      slots: [],
+      slots,
     },
   }
   const effects: SessionEffect[] = [
@@ -205,6 +223,10 @@ function nextPrompt(state: SessionState, nowMs: number, rng: Rng): SessionStep {
   return { state: next, effects }
 }
 
+function nextPrompt(state: SessionState, nowMs: number, rng: Rng): SessionStep {
+  return openPrompt(state, { prompt: dealPrompt(state, rng), slots: [] }, nowMs)
+}
+
 function finish(state: SessionState): SessionStep {
   return {
     state: { ...state, phase: { kind: 'done' } },
@@ -219,8 +241,12 @@ export function advance(
   rng: Rng = Math.random,
 ): SessionStep {
   switch (state.phase.kind) {
-    case 'settling':
-      return nextPrompt(state, nowMs, rng)
+    case 'settling': {
+      const { held } = state.phase
+      return held
+        ? openPrompt(state, held, nowMs)
+        : nextPrompt(state, nowMs, rng)
+    }
     case 'feedback': {
       if (lengthMet(state)) return finish(state)
       if (!tonicChangeDue(state)) return nextPrompt(state, nowMs, rng)
@@ -434,6 +460,59 @@ export function timeout(
     return still(state)
   }
   return grade(state, [], phase.deadlineMs, true, rng)
+}
+
+// The app went to the background (§6): everything stops — the notes, the
+// drone and, by the phase, every wait — until `resume`. A wait's callback
+// while paused does nothing. Not an interaction: walking away isn't practice.
+export function pause(state: SessionState): SessionStep {
+  const { phase } = state
+  if (phase.kind === 'paused' || phase.kind === 'done') return still(state)
+  return {
+    state: { ...state, phase: { kind: 'paused', from: phase } },
+    effects: [{ kind: 'silence' }, { kind: 'stopDrone' }],
+  }
+}
+
+// The Resume tap, which must restart the drone from its handler (§2). The
+// drone comes back and settles as at Start; then a prompt left open plays
+// again, Melody's filled slots kept. Feedback cut off by the pause is over —
+// its answer is graded — so what would have followed it comes next: the
+// Report, a new tonic, or the next prompt.
+export function resume(
+  state: SessionState,
+  nowMs: number,
+  rng: Rng = Math.random,
+): SessionStep {
+  if (state.phase.kind !== 'paused') return still(state)
+  const { from } = state.phase
+  let next = { ...state, activity: touchActivity(state.activity, nowMs) }
+  if (from.kind === 'feedback') {
+    if (lengthMet(next)) return finish(next)
+    if (tonicChangeDue(next)) {
+      next = {
+        ...next,
+        tonic: pickTonic(null, next.tonic, rng),
+        answersOnTonic: 0,
+      }
+    }
+  }
+  const held: HeldPrompt | undefined =
+    from.kind === 'answering'
+      ? { prompt: from.prompt, slots: from.slots }
+      : from.kind === 'settling'
+        ? from.held
+        : undefined
+  return {
+    state: {
+      ...next,
+      phase: held ? { kind: 'settling', held } : { kind: 'settling' },
+    },
+    effects: [
+      { kind: 'startDrone', tonicMidi: tonicMidi(next.tonic) },
+      { kind: 'wake', call: 'advance', inMs: SETTLE_MS },
+    ],
+  }
 }
 
 // The player quits. Whatever was answered stands and goes to the Report.
