@@ -16,17 +16,25 @@ export default function App() {
   const [settings, setSettings] = useState(false)
   const home = phase === null && !settings
 
+  // The shell is a fixed box that scrolls itself rather than a page sized in
+  // dvh: Chrome on Android can keep a stale, too-tall dvh after the update's
+  // reload until the app relaunches, which overflowed the Stage. A fixed box
+  // always covers exactly the screen the browser shows.
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-surface px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] text-ink">
-      {home && <Home onOpen={setSheet} onSettings={() => setSettings(true)} />}
-      {phase === null && settings && (
-        <Settings onBack={() => setSettings(false)} />
-      )}
-      {phase === 'done' && <Report />}
-      {phase !== null && phase !== 'done' && <Stage />}
-      {home && sheet !== null && (
-        <SessionSheet presetId={sheet} onClose={() => setSheet(null)} />
-      )}
-    </main>
+    <div className="fixed inset-0 overflow-y-auto bg-surface">
+      <main className="mx-auto flex min-h-full w-full max-w-md flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] text-ink">
+        {home && (
+          <Home onOpen={setSheet} onSettings={() => setSettings(true)} />
+        )}
+        {phase === null && settings && (
+          <Settings onBack={() => setSettings(false)} />
+        )}
+        {phase === 'done' && <Report />}
+        {phase !== null && phase !== 'done' && <Stage />}
+        {home && sheet !== null && (
+          <SessionSheet presetId={sheet} onClose={() => setSheet(null)} />
+        )}
+      </main>
+    </div>
   )
 }
