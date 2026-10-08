@@ -14,6 +14,7 @@ import {
   sanitizePresetStatsMap,
   sanitizePresetProgressMap,
   sanitizeState,
+  sanitizeTotalsMap,
   SCHEMA_VERSION,
 } from './schema'
 
@@ -38,6 +39,11 @@ describe('sanitizeState', () => {
           unlockedCount: 3,
           passed: [0, 7],
           melodyOutcomes: [true],
+        },
+      },
+      totals: {
+        major: {
+          notes: { sessions: 3, answered: 60, correct: 51, activeMs: 540_000 },
         },
       },
       dailyRecords: {
@@ -157,5 +163,34 @@ describe('sanitizeDailyRecords', () => {
         yesterday: { activeMinutes: 3 },
       }),
     ).toEqual({ '2026-10-04': { date: '2026-10-04', activeMinutes: 3 } })
+  })
+})
+
+describe('sanitizeTotalsMap', () => {
+  it('keeps known presets and modes only', () => {
+    const totals = { sessions: 1, answered: 20, correct: 18, activeMs: 90_000 }
+    expect(
+      sanitizeTotalsMap({
+        major: { notes: totals, chords: totals },
+        dorian: { notes: totals },
+        minor: 'junk',
+      }),
+    ).toEqual({ major: { notes: totals }, minor: {} })
+  })
+
+  it('zeroes bad counts and holds right answers to the answers', () => {
+    expect(
+      sanitizeTotalsMap({
+        major: {
+          speed: { sessions: -1, answered: 5, correct: 9, activeMs: 'x' },
+          melody: { sessions: 1.5, answered: 4, correct: 2, activeMs: -3 },
+        },
+      }),
+    ).toEqual({
+      major: {
+        speed: { sessions: 0, answered: 5, correct: 5, activeMs: 0 },
+        melody: { sessions: 0, answered: 4, correct: 2, activeMs: 0 },
+      },
+    })
   })
 })

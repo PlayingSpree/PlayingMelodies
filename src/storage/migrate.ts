@@ -16,6 +16,7 @@ export function migrateState(raw: unknown): PersistedState {
   if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
     let state = raw as Record<string, unknown>
     if (state.version === 1) state = fromV1(state)
+    if (state.version === 2) state = fromV2(state)
     if (state.version === SCHEMA_VERSION) return sanitizeState(state)
   }
   return defaultState()
@@ -29,4 +30,11 @@ export function migrateState(raw: unknown): PersistedState {
 function fromV1(state: Record<string, unknown>): Record<string, unknown> {
   const { degreeStats: _stats, confusions: _confusions, ...rest } = state
   return { ...rest, version: 2, presetStats: {}, confusions: [] }
+}
+
+// v2 → v3: the all-time totals (§5). Nothing before them recorded which
+// preset or mode time was spent in, so they start at zero; the daily time
+// stays as it was.
+function fromV2(state: Record<string, unknown>): Record<string, unknown> {
+  return { ...state, version: 3, totals: {} }
 }

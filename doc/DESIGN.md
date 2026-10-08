@@ -228,6 +228,15 @@ Report surfaces the session's top pairs (§7.4).
 **Weighting.** Notes and Speed deal from the eligible degrees with subtle bias
 toward recent misses and their confusion partners, never excluding any degree.
 
+**All-time totals.** Everything above is a rolling window, which rates what the ear
+does now but forgets how much work went into it. Totals keep that, **per preset,
+then per mode**: sessions, answers, right answers and active time. They're per mode
+because a Notes answer, a Speed answer and a melody are different measurements, so
+one accuracy across them would mean nothing. Answers count as the Report counts
+them — a melody is one answer, right when clean — and land as each is graded, so a
+session quit partway counts. A session counts with its first answer; one quit
+before it adds only its time. Totals rate nothing and never feed the dealer.
+
 ---
 
 ## 6. Session Modes
@@ -385,9 +394,11 @@ presets and modes.
 
 ### 7.4 Report
 
-Accuracy; per-degree grades with deltas since the previous session; the **top 3
-confusions**; anything newly passed or unlocked; average response time (Notes,
-Melody) or stars earned (Speed); the goal line.
+Accuracy; the preset's **all-time totals** in this mode, this session included
+(§5) — sessions, answers, percent right, time practiced; per-degree grades with
+deltas since the previous session; the **top 3 confusions**; anything newly passed
+or unlocked; average response time (Notes, Melody) or stars earned (Speed); the
+goal line.
 
 ### 7.5 Settings
 
@@ -406,12 +417,13 @@ octaves); the key cue on / off (§3.2, default on); daily goal minutes (default
   turns over it, until it's stopped or Settings closes. The volumes are otherwise
   silent here, since the drone only plays in a session.
 
-- **Export/import** covers everything stored — stats, progress, daily time and
-  settings — since this device holds the only copy (§2). An import replaces all
-  of it, so it asks first.
+- **Export/import** covers everything stored — stats, progress, totals, daily
+  time and settings — since this device holds the only copy (§2). An import
+  replaces all of it, so it asks first.
 - **Reset** opens a preset fresh: its unlocks, passes, melody window, stats and
-  confusions start over. Daily time stays — it belongs to every preset. It asks
-  first.
+  confusions start over. Daily time stays — it belongs to every preset — and so
+  do the preset's totals: they count practice that happened, not where the
+  preset stands. It asks first.
 
 ---
 
@@ -431,11 +443,14 @@ rest.
 **Persisted shapes:** per preset, a stat record per degree (Notes outcome window,
 Speed time window); the confusion log of (preset, played, tapped) entries; a
 per-preset progress record (unlocked count, passed degrees, melody outcome
-window); daily records (date, active minutes); settings and the session sheet's
-last choices, whose mode doubles as Home's open tab. Schema-versioned
+window); per preset and mode, the all-time totals; daily records (date, active
+minutes); settings and the session sheet's last choices, whose mode doubles as
+Home's open tab. Schema-versioned
 from the start. v2 made stats and confusions per preset; v1's shared ones can't be
 split after the fact, so the migration drops them, along with v1's separate pass
-windows, and keeps everything else.
+windows, and keeps everything else. v3 added the totals; nothing before recorded
+which preset or mode time went to, so they start at zero, and the daily records
+are left as they were.
 
 ---
 

@@ -1,20 +1,24 @@
-// The Report (DESIGN.md §7.4): accuracy; the ratings this mode feeds, before
-// and after; the top 3 confusions; anything newly passed or unlocked; the
-// average response time; and the goal line.
+// The Report (DESIGN.md §7.4): accuracy; the preset's all-time totals in this
+// mode; the ratings this mode feeds, before and after; the top 3 confusions;
+// anything newly passed or unlocked; the average response time; and the goal
+// line.
 
 import { useState, type ReactNode } from 'react'
 import {
   computeStreak,
   localDateKey,
   sessionReport,
+  totalsOf,
   type Grade,
   type RatingChange,
   type Star,
+  type Totals,
 } from '../practice'
 import { practiceStore, usePractice, useSettings } from '../store'
 import { degreeLabel, type Degree } from '../theory'
 import { cx } from './cx'
 import {
+  formatDuration,
   formatMinutes,
   formatSeconds,
   gradeLabel,
@@ -74,6 +78,29 @@ function Changes<T>({
   )
 }
 
+function AllTime({ totals }: { totals: Totals }) {
+  const { sessions, answered, correct, activeMs } = totals
+  const cells: [string, string][] = [
+    [sessions.toLocaleString(), sessions === 1 ? 'session' : 'sessions'],
+    [answered.toLocaleString(), 'answered'],
+    [
+      answered === 0 ? '—' : `${Math.round((correct / answered) * 100)}%`,
+      'right',
+    ],
+    [formatDuration(activeMs), 'practiced'],
+  ]
+  return (
+    <Card className="grid grid-cols-4 gap-2 p-4 text-center">
+      {cells.map(([value, label]) => (
+        <div key={label} className="flex flex-col">
+          <span className="text-lg font-extrabold tabular-nums">{value}</span>
+          <span className="text-sm font-semibold text-ink-soft">{label}</span>
+        </div>
+      ))}
+    </Card>
+  )
+}
+
 function Degrees({ degrees }: { degrees: Degree[] }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -89,6 +116,7 @@ function Degrees({ degrees }: { degrees: Degree[] }) {
 export function Report() {
   const session = usePractice((s) => s.session)
   const dailyRecords = usePractice((s) => s.records.dailyRecords)
+  const allTotals = usePractice((s) => s.records.totals)
   const goal = useSettings((s) => s.settings.goalMinutes)
   // Read once per mount; Home and the Report remount after every session.
   const [todayKey] = useState(() => localDateKey(new Date()))
@@ -99,6 +127,7 @@ export function Report() {
   const today = dailyRecords[todayKey]?.activeMinutes ?? 0
   const streak = computeStreak(dailyRecords, goal, todayKey)
   const { ratings } = report
+  const totals = totalsOf(allTotals, preset.id, options.mode)
   const { close, start } = practiceStore.getState()
 
   return (
@@ -123,6 +152,10 @@ export function Report() {
           )}
         </span>
       </Card>
+
+      <Section label="All time">
+        <AllTime totals={totals} />
+      </Section>
 
       {report.newlyPassed.length > 0 && (
         <Section label="Newly passed">

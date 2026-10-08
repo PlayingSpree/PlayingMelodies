@@ -1,4 +1,4 @@
-// The versioned localStorage schema (DESIGN.md §8), currently v2. Pure TS:
+// The versioned localStorage schema (DESIGN.md §8), currently v3. Pure TS:
 // the persisted shape, its defaults, and sanitizers that coerce unknown data
 // (hand-edited, stale, corrupted, imported) into a valid state field by field,
 // so one bad record never costs the player the rest. Reading and writing
@@ -12,6 +12,7 @@ import {
   emptyStatsMap,
   freshProgress,
   MELODY_WINDOW,
+  MODES,
   OUTCOME_WINDOW,
   sanitizeSessionOptions,
   sanitizeSettings,
@@ -19,6 +20,7 @@ import {
   SPEED_WINDOW,
   type DailyRecord,
   type DailyRecords,
+  type Mode,
   type DegreeStats,
   type DegreeStatsMap,
   type LoggedConfusion,
@@ -26,6 +28,8 @@ import {
   type PresetStatsMap,
   type SessionOptions,
   type Settings,
+  type Totals,
+  type TotalsMap,
 } from '../practice'
 import {
   DEGREES,
@@ -38,7 +42,8 @@ import {
 } from '../theory'
 
 // v2 keeps stats and confusions per preset (spec 0.13.0); v1 shared them.
-export const SCHEMA_VERSION = 2
+// v3 adds the all-time totals (spec 0.16.0).
+export const SCHEMA_VERSION = 3
 
 // The single versioned key. The version lives *inside* the payload, so a
 // migration reads one blob, checks `version` and upgrades in a chain.
@@ -52,6 +57,8 @@ export interface PersistedState {
   confusions: readonly LoggedConfusion[]
   // Absent means the preset was never played: it opens fresh.
   presetProgress: Readonly<Partial<Record<PresetId, PresetProgress>>>
+  // Absent means the preset was never played in that mode.
+  totals: TotalsMap
   dailyRecords: DailyRecords
   // The session sheet's last choices, which it opens on (§7.2).
   lastOptions: SessionOptions
@@ -64,6 +71,7 @@ export function defaultState(): PersistedState {
     presetStats: {},
     confusions: [],
     presetProgress: {},
+    totals: {},
     dailyRecords: {},
     lastOptions: DEFAULT_SESSION_OPTIONS,
   }
@@ -182,6 +190,43 @@ export function sanitizePresetProgressMap(
   return map
 }
 
+function asCount(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+    ? value
+    : 0
+}
+
+// Each count on its own; right answers are held to the answers.
+function sanitizeTotals(value: unknown): Totals {
+  const raw = asRecord(value)
+  const answered = asCount(raw.answered)
+  const activeMs = raw.activeMs
+  return {
+    sessions: asCount(raw.sessions),
+    answered,
+    correct: Math.min(asCount(raw.correct), answered),
+    activeMs:
+      typeof activeMs === 'number' && Number.isFinite(activeMs) && activeMs > 0
+        ? activeMs
+        : 0,
+  }
+}
+
+export function sanitizeTotalsMap(value: unknown): TotalsMap {
+  const raw = asRecord(value)
+  const map: Partial<Record<PresetId, Partial<Record<Mode, Totals>>>> = {}
+  for (const id of PRESET_IDS) {
+    if (!(id in raw)) continue
+    const modes = asRecord(raw[id])
+    const preset: Partial<Record<Mode, Totals>> = {}
+    for (const mode of MODES) {
+      if (mode in modes) preset[mode] = sanitizeTotals(modes[mode])
+    }
+    map[id] = preset
+  }
+  return map
+}
+
 export function sanitizeDailyRecords(value: unknown): DailyRecords {
   const records: Record<string, DailyRecord> = {}
   for (const [key, entry] of Object.entries(asRecord(value))) {
@@ -198,7 +243,7 @@ export function sanitizeDailyRecords(value: unknown): DailyRecords {
   return records
 }
 
-// A v2 payload, field by field.
+// A v3 payload, field by field.
 export function sanitizeState(raw: Record<string, unknown>): PersistedState {
   return {
     version: SCHEMA_VERSION,
@@ -206,6 +251,7 @@ export function sanitizeState(raw: Record<string, unknown>): PersistedState {
     presetStats: sanitizePresetStatsMap(raw.presetStats),
     confusions: sanitizeConfusions(raw.confusions),
     presetProgress: sanitizePresetProgressMap(raw.presetProgress),
+    totals: sanitizeTotalsMap(raw.totals),
     dailyRecords: sanitizeDailyRecords(raw.dailyRecords),
     lastOptions: sanitizeSessionOptions(raw.lastOptions),
   }

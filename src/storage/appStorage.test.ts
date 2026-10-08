@@ -43,13 +43,35 @@ describe('migrateState', () => {
       },
     }
     const state = migrateState(v1)
-    expect(state.version).toBe(2)
+    expect(state.version).toBe(3)
     expect(state.presetStats).toEqual({})
     expect(state.confusions).toEqual([])
     expect(state).not.toHaveProperty('degreeStats')
     expect(state.settings.goalMinutes).toBe(20)
     expect(state.presetProgress).toEqual({ major: progress })
     expect(state.dailyRecords).toEqual(v1.dailyRecords)
+    expect(state.totals).toEqual({})
+  })
+
+  it('starts v2 totals at zero, keeping the rest', () => {
+    const v2 = {
+      ...defaultState(),
+      version: 2,
+      presetStats: {
+        major: { 4: { outcomes: [true, true], speedTimesMs: [] } },
+      },
+      confusions: [{ preset: 'major', played: 4, tapped: 5 }],
+      dailyRecords: {
+        '2026-10-04': { date: '2026-10-04', activeMinutes: 12 },
+      },
+    }
+    const { totals: _totals, ...v2State } = v2
+    const state = migrateState(v2State)
+    expect(state.version).toBe(3)
+    expect(state.totals).toEqual({})
+    expect(state.presetStats.major?.[4]?.outcomes).toEqual([true, true])
+    expect(state.confusions).toEqual(v2.confusions)
+    expect(state.dailyRecords).toEqual(v2.dailyRecords)
   })
 })
 

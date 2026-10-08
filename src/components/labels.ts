@@ -101,3 +101,10 @@ export function formatMinutes(minutes: number): string {
 export function formatSeconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`
 }
+
+// Practice time in whole minutes, with hours once there are any.
+export function formatDuration(ms: number): string {
+  const minutes = Math.round(ms / 60_000)
+  if (minutes < 60) return `${minutes} min`
+  return `${Math.floor(minutes / 60)} h ${minutes % 60} min`
+}

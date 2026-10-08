@@ -4,7 +4,8 @@
 // out the step's effects: audio through Sound, waits as timers that call the
 // runner back, and during feedback and the key cue which pad key is sounding.
 // After every step it writes what changed through to storage: the records
-// when an answer was graded, and new active time to today.
+// when an answer was graded, new active time to today, and both to the
+// preset's all-time totals in this mode.
 
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
@@ -15,7 +16,10 @@ import {
   endSession,
   feedbackSettings,
   freshProgress,
+  isEmptyTotals,
   localDateKey,
+  recordTotals,
+  stepTotals,
   statsOf,
   pause,
   replay,
@@ -40,7 +44,7 @@ import { settingsStore } from './settingsStore'
 
 export type PracticeRecords = Pick<
   PersistedState,
-  'presetStats' | 'confusions' | 'presetProgress' | 'dailyRecords'
+  'presetStats' | 'confusions' | 'presetProgress' | 'totals' | 'dailyRecords'
 >
 
 export interface PracticeStoreState {
@@ -72,7 +76,8 @@ export interface PracticeStoreState {
   close(): void
 
   // Settings (§7.5), offered from Home only, never mid-session. A reset opens
-  // the preset fresh and clears its stats and confusions (§4, §5).
+  // the preset fresh and clears its stats and confusions (§4, §5). Its totals
+  // stay: the practice they count still happened.
   resetPreset(presetId: PresetId): void
   // Replaces everything stored with an imported backup, the session sheet's
   // last choices included. The settings store must reload after it.
@@ -94,8 +99,9 @@ function lights(phase: SessionState['phase']['kind']): boolean {
 }
 
 function recordsOf(state: PersistedState): PracticeRecords {
-  const { presetStats, confusions, presetProgress, dailyRecords } = state
-  return { presetStats, confusions, presetProgress, dailyRecords }
+  const { presetStats, confusions, presetProgress, totals, dailyRecords } =
+    state
+  return { presetStats, confusions, presetProgress, totals, dailyRecords }
 }
 
 export function createPracticeStore({
@@ -173,12 +179,15 @@ export function createPracticeStore({
     }
 
     // Writes a step's changes through: the preset's records once an answer
-    // is graded, and active time earned since the last step to today.
+    // is graded, active time earned since the last step to today, and both
+    // to the totals.
     function persist(before: SessionState, after: SessionState): void {
       const graded = after.practice !== before.practice
       const earnedMs = after.activity.activeMs - before.activity.activeMs
-      if (!graded && earnedMs <= 0) return
+      const totals = stepTotals(before, after)
+      if (!graded && isEmptyTotals(totals)) return
       const presetId = after.setup.preset.id
+      const { mode } = after.setup.options
       storage.update((state) => {
         let next = state
         if (graded) {
@@ -188,6 +197,12 @@ export function createPracticeStore({
             presetStats: { ...next.presetStats, [presetId]: degreeStats },
             confusions,
             presetProgress: { ...next.presetProgress, [presetId]: progress },
+          }
+        }
+        if (!isEmptyTotals(totals)) {
+          next = {
+            ...next,
+            totals: recordTotals(next.totals, presetId, mode, totals),
           }
         }
         if (earnedMs > 0) {

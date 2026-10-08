@@ -391,6 +391,40 @@ describe('practiceStore', () => {
     )
   })
 
+  it('adds each session to the preset’s all-time totals in its mode', () => {
+    const t = setup()
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS + 1000)
+    t.answerRight() // 3 s after the Start tap
+    vi.advanceTimersByTime(RIGHT_FEEDBACK_MS + 2000)
+    t.answerWrong() // 3 s after the last
+    t.store.getState().close()
+
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS)
+    t.answerRight() // 2 s after the Start tap
+    t.store.getState().close()
+
+    const notes = { sessions: 2, answered: 3, correct: 2, activeMs: 8000 }
+    expect(t.storage.state.totals).toEqual({ major: { notes } })
+    expect(t.store.getState().records.totals).toEqual(t.storage.state.totals)
+  })
+
+  it('a session quit before its first answer adds only its time', () => {
+    const t = setup()
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS)
+    t.store.getState().replay() // a tap: 2 s of active time
+    t.store.getState().close()
+
+    expect(t.storage.state.totals.major?.notes).toEqual({
+      sessions: 0,
+      answered: 0,
+      correct: 0,
+      activeMs: 2000,
+    })
+  })
+
   it('quitting keeps the answers for the Report; closing clears it', () => {
     const t = setup()
     t.start()
@@ -432,6 +466,7 @@ describe('practiceStore', () => {
 
   it('resets one preset to fresh, stats and confusions too, leaving the others', () => {
     const t = setup(allPassed('major'))
+    const totals = { sessions: 2, answered: 40, correct: 35, activeMs: 300_000 }
     const minorStats = {
       ...emptyStatsMap(),
       3: { outcomes: [true], speedTimesMs: [] },
@@ -444,6 +479,7 @@ describe('practiceStore', () => {
         { preset: 'major', played: 4, tapped: 5 },
         { preset: 'minor', played: 3, tapped: 5 },
       ],
+      totals: { major: { notes: totals } },
     }))
 
     t.store.getState().resetPreset('major')
@@ -459,6 +495,8 @@ describe('practiceStore', () => {
       confusions: [{ preset: 'minor', played: 3, tapped: 5 }],
     })
     expect(t.storage.state.presetProgress.major).toBeUndefined()
+    // The totals count practice that happened, so they stay.
+    expect(records.totals).toEqual({ major: { notes: totals } })
   })
 
   it('an import replaces the stored state and the records', () => {

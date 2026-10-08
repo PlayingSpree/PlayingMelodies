@@ -10,6 +10,15 @@ produced it.
 
 ---
 
+## 0.16.0 — 2026-10-08
+
+**All-time totals on the Report.** Each preset keeps, per mode, how many sessions,
+answers and right answers it has had and how much active time went into it. They
+never roll off, rate nothing, and survive a preset reset. The Report shows the
+preset's totals in the session's mode, this session included. Schema v3: totals
+start at zero, since earlier data never recorded which preset or mode time went
+to (§5, §7.4, §7.5, §8).
+
 ## 0.15.0 — 2026-10-08
 
 **Alternate starts each session up or down at random**, instead of always up,
