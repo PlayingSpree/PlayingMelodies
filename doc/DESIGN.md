@@ -283,10 +283,11 @@ The core drill, and the only mode that unlocks anything. Deals the preset's
 - Which tonic the correct note **resolves to** is a setting too: **closest** (the
   default) lets ♭2–4 fall to the 1 below and ♯4–7 rise to the 1 above; **up** and
   **down** always go that way, so the pull toward each tonic can be heard on its
-  own; **alternate** starts each session up and switches every few resolves (1–10,
-  default every one); **random** picks up or down each time. The resolve stays in
-  the note's octave, and a played 1 is held rather than resolved — it doesn't
-  count toward alternate's switch.
+  own; **alternate** starts each session up or down at random, so neither way
+  always comes first, and switches every few resolves (1–10, default every one);
+  **random** picks up or down each time. The resolve stays in the note's octave,
+  and a played 1 is held rather than resolved — it doesn't count toward
+  alternate's switch.
 - While feedback plays, each note's pad key **lights up as it sounds**, so every
   sound can be matched to its key (§7.3). Prompts never light a key: that would
   give the answer away.

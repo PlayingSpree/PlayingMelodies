@@ -625,8 +625,9 @@ describe('resolve direction', () => {
     feedback: Partial<FeedbackSettings>,
     count: number,
     rng?: Rng,
+    seed = 1,
   ): ('up' | 'down' | null)[] {
-    let step = firstPrompt({}, practiceWith(), 1, { ...all, ...feedback })
+    let step = firstPrompt({}, practiceWith(), seed, { ...all, ...feedback })
     const result: ('up' | 'down' | null)[] = []
     let t = 3000
     for (let i = 0; i < count; i++) {
@@ -654,15 +655,24 @@ describe('resolve direction', () => {
     expect(down).not.toContain('up')
   })
 
-  it('alternates every few resolves, skipping the tonic', () => {
-    const resolved = ways(
-      { resolveDirection: 'alternate', alternateEvery: 2 },
-      12,
-    ).filter((way) => way !== null)
-    expect(resolved.length).toBeGreaterThan(4)
-    resolved.forEach((way, i) => {
-      expect(way).toBe(Math.floor(i / 2) % 2 === 0 ? 'up' : 'down')
-    })
+  it('alternates every few resolves from a random start, skipping the tonic', () => {
+    const starts = new Set<string>()
+    for (let seed = 1; seed <= 8; seed++) {
+      const resolved = ways(
+        { resolveDirection: 'alternate', alternateEvery: 2 },
+        12,
+        undefined,
+        seed,
+      ).filter((way) => way !== null)
+      expect(resolved.length).toBeGreaterThan(4)
+      const first = resolved[0]
+      const other = first === 'up' ? 'down' : 'up'
+      starts.add(first ?? '')
+      resolved.forEach((way, i) => {
+        expect(way).toBe(Math.floor(i / 2) % 2 === 0 ? first : other)
+      })
+    }
+    expect(starts).toEqual(new Set(['up', 'down']))
   })
 
   it('picks up or down at random', () => {

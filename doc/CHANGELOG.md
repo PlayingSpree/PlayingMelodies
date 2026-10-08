@@ -10,6 +10,11 @@ produced it.
 
 ---
 
+## 0.15.0 — 2026-10-08
+
+**Alternate starts each session up or down at random**, instead of always up,
+so neither way always comes first (§6.1).
+
 ## 0.14.0 — 2026-10-08
 
 **A setting picks which parts of the feedback notes play.** The wrong note, the

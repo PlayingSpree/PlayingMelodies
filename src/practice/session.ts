@@ -106,8 +106,10 @@ export interface SessionState {
   newlyPassed: Degree[]
   newlyUnlocked: Degree[]
   activity: ActivityClock
-  // Feedback cues so far that resolved to a tonic, for 'alternate' (§6.1).
+  // Feedback cues so far that resolved to a tonic, and the way the first
+  // goes, for 'alternate' (§6.1).
   resolves: number
+  alternateStart: 'up' | 'down'
 }
 
 export type SessionEffect =
@@ -141,6 +143,7 @@ export function startSession(
     throw new Error(`${options.mode} is not open in ${preset.name}`)
   }
   const tonic = pickTonic(options.tonicLock, null, rng)
+  const alternateStart = rng() < 0.5 ? 'up' : 'down'
   const { state, effects } = settle(
     {
       setup,
@@ -155,6 +158,7 @@ export function startSession(
       // The Start tap is the first interaction.
       activity: touchActivity(IDLE_CLOCK, nowMs),
       resolves: 0,
+      alternateStart,
     },
     0,
   )
@@ -365,15 +369,18 @@ function feedbackParts(feedback: FeedbackSettings): FeedbackParts {
   }
 }
 
-// Which way the next resolve goes: 'alternate' starts each session up and
-// switches every `alternateEvery` resolves.
+// Which way the next resolve goes: 'alternate' starts each session up or
+// down at random and switches every `alternateEvery` resolves.
 function resolveWay(state: SessionState, rng: Rng): Resolve {
   const { resolveDirection, alternateEvery } = state.setup.feedback
   switch (resolveDirection) {
-    case 'alternate':
-      return Math.floor(state.resolves / alternateEvery) % 2 === 0
-        ? 'up'
-        : 'down'
+    case 'alternate': {
+      const { alternateStart } = state
+      if (Math.floor(state.resolves / alternateEvery) % 2 === 0) {
+        return alternateStart
+      }
+      return alternateStart === 'up' ? 'down' : 'up'
+    }
     case 'random':
       return rng() < 0.5 ? 'up' : 'down'
     default:
