@@ -1,7 +1,7 @@
 // Settings (DESIGN.md §7.5): drone and note volume with a test sound to set
-// them by, which answers play feedback notes and which way they resolve,
-// register, the key cue, the daily goal, JSON export/import of everything
-// stored, and reset progress per preset.
+// them by, which answers play feedback notes, which parts play and which way
+// they resolve, register, the key cue, the daily goal, JSON export/import of
+// everything stored, and reset progress per preset.
 // Reached from Home only, so nothing here runs mid-session.
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -183,6 +183,28 @@ function Choice<T extends string | number>({
   )
 }
 
+// One chip that turns a setting on and off.
+function Toggle({
+  label,
+  on,
+  onChange,
+}: {
+  label: string
+  on: boolean
+  onChange: (on: boolean) => void
+}) {
+  return (
+    <Chip
+      className={CHIP}
+      selected={on}
+      aria-pressed={on}
+      onClick={() => onChange(!on)}
+    >
+      {label}
+    </Chip>
+  )
+}
+
 const STEP =
   'flex h-9 w-9 items-center justify-center rounded-[12px] border-2 border-muted-border text-lg font-extrabold leading-none text-ink-soft transition-transform active:translate-y-[1px] disabled:opacity-40'
 
@@ -233,15 +255,20 @@ function Stepper({
   )
 }
 
-// Which answers play feedback notes, and which way the correct note
-// resolves to the 1 (§6.1). The bar and the alternate count only show while
-// they apply.
+// Which answers play feedback notes, which parts of them play, and which way
+// the correct note resolves to the 1 (§6.1). The bar, the resolve (which
+// needs the correct note), its direction and the alternate count only show
+// while they apply.
 function FeedbackSection() {
   const feedback = useSettings((s) => s.settings.feedbackSound)
   const bar = useSettings((s) => s.settings.feedbackBelow)
+  const wrong = useSettings((s) => s.settings.feedbackWrong)
+  const correct = useSettings((s) => s.settings.feedbackCorrect)
+  const resolve = useSettings((s) => s.settings.feedbackResolve)
   const direction = useSettings((s) => s.settings.resolveDirection)
   const every = useSettings((s) => s.settings.alternateEvery)
   const update = useSettings((s) => s.update)
+  const resolves = correct && resolve
   return (
     <Section label="Feedback">
       <Choice
@@ -260,14 +287,38 @@ function FeedbackSection() {
           onChange={(feedbackBelow) => update({ feedbackBelow })}
         />
       )}
-      <Choice
-        label="Resolve to the 1"
-        choices={RESOLVE_DIRECTIONS}
-        value={direction}
-        name={(way) => RESOLVE_DIRECTION_LABELS[way]}
-        onChange={(resolveDirection) => update({ resolveDirection })}
-      />
-      {direction === 'alternate' && (
+      <div className="flex flex-col gap-2">
+        <span className="font-semibold">Feedback plays</span>
+        <div className="flex flex-wrap gap-2">
+          <Toggle
+            label="Wrong note"
+            on={wrong}
+            onChange={(feedbackWrong) => update({ feedbackWrong })}
+          />
+          <Toggle
+            label="Correct note"
+            on={correct}
+            onChange={(feedbackCorrect) => update({ feedbackCorrect })}
+          />
+          {correct && (
+            <Toggle
+              label="Resolve"
+              on={resolve}
+              onChange={(feedbackResolve) => update({ feedbackResolve })}
+            />
+          )}
+        </div>
+      </div>
+      {resolves && (
+        <Choice
+          label="Resolve to the 1"
+          choices={RESOLVE_DIRECTIONS}
+          value={direction}
+          name={(way) => RESOLVE_DIRECTION_LABELS[way]}
+          onChange={(resolveDirection) => update({ resolveDirection })}
+        />
+      )}
+      {resolves && direction === 'alternate' && (
         <Stepper
           label="Switch every"
           value={`${every}`}

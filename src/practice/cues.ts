@@ -109,39 +109,69 @@ export function silentCue(correct: boolean): Cue {
   return { notes: [], lengthMs: correct ? RIGHT_FEEDBACK_MS : SILENT_MISS_MS }
 }
 
+// Which parts of the feedback notes play (§6.1, §7.5): the tapped note on a
+// miss, the correct note, and the correct note's resolve to the tonic, which
+// needs the correct note.
+export interface FeedbackParts {
+  wrong: boolean
+  correct: boolean
+  resolve: boolean
+}
+
+export const EVERY_PART: FeedbackParts = {
+  wrong: true,
+  correct: true,
+  resolve: true,
+}
+
 // An answer in Notes or Speed (§6.1, §6.2): on a miss the tapped note — none
 // for a Speed timeout — then the correct note resolving `way`. A right answer
-// plays just the correct note resolving.
+// plays just the correct note resolving. Parts turned off are left out; with
+// nothing left it is the silent cue, and a miss never ends sooner than one.
 export function noteFeedbackCue(
   played: number,
   tapped: Degree | null,
   way: Resolve = 'closest',
+  parts: FeedbackParts = EVERY_PART,
 ): Cue {
+  const right = tapped === degreeAt(played)
   const notes: CueNote[] = []
   let at = 0
-  const note = (position: number, durationMs: number) =>
+  let end = 0
+  const note = (position: number, durationMs: number) => {
     notes.push({ position, atMs: at, durationMs })
-  if (tapped !== null && tapped !== degreeAt(played)) {
+    end = at + durationMs
+  }
+  if (parts.wrong && tapped !== null && !right) {
     note(besideOf(played, tapped), FEEDBACK_NOTE_MS)
     at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
   }
-  const tonic = resolveToTonic(played, way)
-  if (tonic === null) {
-    note(played, RESOLVE_HOLD_MS)
-  } else {
-    note(played, RESOLVE_STEP_MS)
-    at += RESOLVE_STEP_MS
-    note(tonic, RESOLVE_HOLD_MS)
+  if (parts.correct) {
+    const tonic = parts.resolve ? resolveToTonic(played, way) : null
+    if (tonic === null) {
+      note(played, RESOLVE_HOLD_MS)
+    } else {
+      note(played, RESOLVE_STEP_MS)
+      at += RESOLVE_STEP_MS
+      note(tonic, RESOLVE_HOLD_MS)
+    }
   }
-  return { notes, lengthMs: at + RESOLVE_HOLD_MS + FEEDBACK_TAIL_MS }
+  if (notes.length === 0) return silentCue(right)
+  const lengthMs = end + FEEDBACK_TAIL_MS
+  return {
+    notes,
+    lengthMs: right ? lengthMs : Math.max(lengthMs, SILENT_MISS_MS),
+  }
 }
 
 // A checked melody (§6.3): it replays as played, then each wrong slot plays
-// tapped-versus-correct.
+// tapped-versus-correct, or whichever of the two `parts` keeps. Melody has
+// no resolve.
 export function melodyFeedbackCue(
   played: readonly number[],
   tapped: readonly Degree[],
   tempo: Tempo,
+  parts: FeedbackParts = EVERY_PART,
 ): Cue {
   const replay = promptCue(played, tempo)
   const notes = [...replay.notes]
@@ -149,14 +179,19 @@ export function melodyFeedbackCue(
   played.forEach((position, i) => {
     const answer = tapped[i]
     if (answer === undefined || answer === degreeAt(position)) return
+    if (!parts.wrong && !parts.correct) return
     at += FEEDBACK_STEP_MS
-    notes.push({
-      position: besideOf(position, answer),
-      atMs: at,
-      durationMs: FEEDBACK_NOTE_MS,
-    })
-    at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
-    notes.push({ position, atMs: at, durationMs: FEEDBACK_NOTE_MS })
+    if (parts.wrong) {
+      notes.push({
+        position: besideOf(position, answer),
+        atMs: at,
+        durationMs: FEEDBACK_NOTE_MS,
+      })
+      if (parts.correct) at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
+    }
+    if (parts.correct) {
+      notes.push({ position, atMs: at, durationMs: FEEDBACK_NOTE_MS })
+    }
   })
   return { notes, lengthMs: at + FEEDBACK_STEP_MS + FEEDBACK_TAIL_MS }
 }

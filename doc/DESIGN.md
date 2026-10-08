@@ -272,6 +272,14 @@ The core drill, and the only mode that unlocks anything. Deals the preset's
   it is still being learned. Speed reads the same Notes grade — stars rate speed,
   not knowing — and Melody reads the preset's melody grade (§6.3). Silent
   feedback holds a miss ~2 s, long enough to find the correct key on the pad.
+- Which **parts** of the feedback notes play is a setting too, each on its own
+  and all on by default: the **wrong note** (the tapped note on a miss, with
+  its pause), the **correct note**, and its **resolve**. The resolve needs the
+  correct note, so turning the correct note off drops it as well; with the
+  resolve off the correct note is held, as a played 1 is, and doesn't count
+  toward alternate's switch. When nothing is left to play the answer gets the
+  silent feedback, and a miss is never held shorter than silent feedback holds
+  it.
 - Which tonic the correct note **resolves to** is a setting too: **closest** (the
   default) lets ♭2–4 fall to the 1 below and ♯4–7 rise to the 1 above; **up** and
   **down** always go that way, so the pull toward each tonic can be heard on its
@@ -319,7 +327,9 @@ Opening at 3 rather than at a fully passed preset lets melodies start early.
   wrong slot then plays tapped-versus-correct, with the same pause between them as
   in Notes. The keys light as they sound, as in Notes. The feedback-notes setting
   applies per melody: on misses only, a clean melody gets its ✓s in silence; on
-  never, every melody does.
+  never, every melody does. The parts setting (§6.1) keeps the wrong or the
+  correct note of each pair, or neither; the replay always plays, and Melody
+  has no resolve.
 - **Grading:** a melody is **clean** only if every note is right. The preset's
   **melody grade** is the share of clean melodies over its last 10, on the same
   letter bands as §5. Wrong notes feed the confusion log; nothing else (§5).
@@ -381,13 +391,15 @@ Melody) or stars earned (Speed); the goal line.
 ### 7.5 Settings
 
 Drone volume, note volume; feedback notes after every answer / low grades /
-misses only / never, and which way they resolve — closest / up / down /
-alternate / random (§6.1, defaults misses only and closest); register (1 / 2 / 3
+misses only / never, which parts play — wrong note / correct note / resolve,
+each on or off — and which way they resolve — closest / up / down / alternate /
+random (§6.1, defaults misses only, every part and closest); register (1 / 2 / 3
 octaves); the key cue on / off (§3.2, default on); daily goal minutes (default
 10), JSON export/import, and reset progress per preset.
 
 - Low grades' bar and alternate's switch count only show while their option is
-  picked.
+  picked; the resolve only while the correct note is on, and its direction only
+  while both are.
 
 - A **test sound** sets the volumes by ear: the drone with a few degrees taking
   turns over it, until it's stopped or Settings closes. The volumes are otherwise

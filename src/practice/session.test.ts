@@ -585,6 +585,37 @@ describe('feedback notes below a grade', () => {
   })
 })
 
+describe('feedback parts setting', () => {
+  const all = { feedbackSound: 'all' } as const
+
+  it('plays only the parts turned on', () => {
+    const { state } = firstPrompt({}, practiceWith(), 1, {
+      ...all,
+      feedbackWrong: false,
+      feedbackResolve: false,
+    })
+    const played = prompt(state)[0]
+    expect(
+      cueOf(tap(state, wrongDegree(state), 3000))?.notes.map((n) => n.position),
+    ).toEqual([played])
+  })
+
+  it('drops the resolve with the correct note', () => {
+    const { state } = firstPrompt({}, practiceWith(), 1, {
+      ...all,
+      feedbackCorrect: false,
+      feedbackResolve: true,
+    })
+    expect(cueOf(tap(state, playedDegree(state), 3000))).toEqual({
+      notes: [],
+      lengthMs: RIGHT_FEEDBACK_MS,
+    })
+    const miss = tap(state, wrongDegree(state), 3000)
+    expect(cueOf(miss)?.notes).toHaveLength(1)
+    expect(miss.state.resolves).toBe(0)
+  })
+})
+
 describe('resolve direction', () => {
   const all = { feedbackSound: 'all' } as const
 

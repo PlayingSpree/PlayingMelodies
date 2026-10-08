@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   besideOf,
+  EVERY_PART,
   FEEDBACK_NOTE_MS,
   FEEDBACK_STEP_MS,
   KEY_CUE_GAP_MS,
@@ -9,6 +10,7 @@ import {
   keyCue,
   melodyFeedbackCue,
   promptCue,
+  RESOLVE_HOLD_MS,
   resolveToTonic,
   noteFeedbackCue,
   RIGHT_FEEDBACK_MS,
@@ -122,6 +124,51 @@ describe('noteFeedbackCue', () => {
   })
 })
 
+describe('noteFeedbackCue parts', () => {
+  const only = (parts: Partial<typeof EVERY_PART>) => ({
+    wrong: false,
+    correct: false,
+    resolve: false,
+    ...parts,
+  })
+
+  it('leaves out the tapped note and its pause', () => {
+    const cue = noteFeedbackCue(9, 7, 'closest', {
+      ...EVERY_PART,
+      wrong: false,
+    })
+    expect(positions(cue)).toEqual([9, 12])
+    expect(cue.notes[0]?.atMs).toBe(0)
+  })
+
+  it('holds the correct note instead of resolving it', () => {
+    const cue = noteFeedbackCue(
+      9,
+      7,
+      'closest',
+      only({ wrong: true, correct: true }),
+    )
+    expect(positions(cue)).toEqual([7, 9])
+    expect(cue.notes[1]?.durationMs).toBe(RESOLVE_HOLD_MS)
+  })
+
+  it('plays only the tapped note, held as long as a silent miss', () => {
+    const cue = noteFeedbackCue(9, 7, 'closest', only({ wrong: true }))
+    expect(positions(cue)).toEqual([7])
+    expect(cue.lengthMs).toBeGreaterThanOrEqual(SILENT_MISS_MS)
+  })
+
+  it('falls back to the silent cue with nothing to play', () => {
+    expect(noteFeedbackCue(9, 7, 'closest', only({}))).toEqual(silentCue(false))
+    expect(noteFeedbackCue(9, 9, 'closest', only({ wrong: true }))).toEqual(
+      silentCue(true),
+    )
+    expect(noteFeedbackCue(9, null, 'closest', only({ wrong: true }))).toEqual(
+      silentCue(false),
+    )
+  })
+})
+
 describe('melodyFeedbackCue', () => {
   it('replays the melody, then tapped-versus-correct per wrong slot', () => {
     const cue = melodyFeedbackCue([0, 2, 16], [0, 3, 5], 'normal')
@@ -131,6 +178,29 @@ describe('melodyFeedbackCue', () => {
     expect(cue.notes[4]?.atMs).toBe(
       replayEnd + FEEDBACK_STEP_MS + FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS,
     )
+  })
+
+  it('plays only the parts asked for per wrong slot', () => {
+    const played = [0, 2, 16]
+    const tapped = [0, 3, 5] as const
+    const replayEnd = 3 * TEMPO_STEP_MS.normal
+    const wrong = melodyFeedbackCue(played, tapped, 'normal', {
+      ...EVERY_PART,
+      correct: false,
+    })
+    expect(positions(wrong)).toEqual([0, 2, 16, 3, 17])
+    const correct = melodyFeedbackCue(played, tapped, 'normal', {
+      ...EVERY_PART,
+      wrong: false,
+    })
+    expect(positions(correct)).toEqual([0, 2, 16, 2, 16])
+    expect(correct.notes[3]?.atMs).toBe(replayEnd + FEEDBACK_STEP_MS)
+    const neither = melodyFeedbackCue(played, tapped, 'normal', {
+      wrong: false,
+      correct: false,
+      resolve: true,
+    })
+    expect(positions(neither)).toEqual([0, 2, 16])
   })
 
   it('only replays a clean melody', () => {

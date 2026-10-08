@@ -28,6 +28,7 @@ import {
   resolveToTonic,
   silentCue,
   type Cue,
+  type FeedbackParts,
   type Resolve,
 } from './cues'
 import { presetConfusions } from './confusions'
@@ -354,6 +355,16 @@ function playsFeedback(state: SessionState, correct: boolean): boolean {
   }
 }
 
+// The feedback parts that play; the resolve goes with the correct note.
+function feedbackParts(feedback: FeedbackSettings): FeedbackParts {
+  const { feedbackWrong, feedbackCorrect, feedbackResolve } = feedback
+  return {
+    wrong: feedbackWrong,
+    correct: feedbackCorrect,
+    resolve: feedbackCorrect && feedbackResolve,
+  }
+}
+
 // Which way the next resolve goes: 'alternate' starts each session up and
 // switches every `alternateEvery` resolves.
 function resolveWay(state: SessionState, rng: Rng): Resolve {
@@ -407,17 +418,22 @@ function grade(
     timeMs,
   }
   const sounds = playsFeedback(state, result.correct)
+  const parts = feedbackParts(state.setup.feedback)
   // Melody's feedback replays the melody and has no resolve (§6.3).
   const resolves =
-    sounds && options.mode !== 'melody' && resolveToTonic(played) !== null
+    sounds &&
+    parts.resolve &&
+    options.mode !== 'melody' &&
+    resolveToTonic(played) !== null
   const cue = !sounds
     ? silentCue(result.correct)
     : options.mode === 'melody'
-      ? melodyFeedbackCue(prompt, tapped, options.tempo)
+      ? melodyFeedbackCue(prompt, tapped, options.tempo, parts)
       : noteFeedbackCue(
           played,
           tapped[0] ?? null,
           resolves ? resolveWay(state, rng) : 'closest',
+          parts,
         )
 
   const next: SessionState = {

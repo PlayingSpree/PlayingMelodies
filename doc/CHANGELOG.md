@@ -10,6 +10,16 @@ produced it.
 
 ---
 
+## 0.14.0 — 2026-10-08
+
+**A setting picks which parts of the feedback notes play.** The wrong note, the
+correct note and its resolve each turn on or off, all on by default. The resolve
+needs the correct note and is dropped with it; a held correct note doesn't count
+toward alternate's switch. With nothing left to play an answer gets the silent
+feedback, and a miss is never held shorter than that. In Melody the wrong and
+correct notes of each pair follow the setting and the replay always plays
+(§6.1, §6.3, §7.5).
+
 ## 0.13.0 — 2026-10-07
 
 **Stats and confusions are per preset.** Grades and stars are kept per preset,

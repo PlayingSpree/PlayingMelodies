@@ -41,13 +41,24 @@ export interface Settings {
   feedbackBelow: FeedbackBar
   resolveDirection: ResolveDirection
   alternateEvery: number // 1–MAX_ALTERNATE_EVERY resolves
+  // Which parts of the feedback notes play (§6.1): the tapped note on a miss,
+  // the correct note, and its resolve, which needs the correct note.
+  feedbackWrong: boolean
+  feedbackCorrect: boolean
+  feedbackResolve: boolean
   keyCue: boolean // 1–5–1 when a tonic comes in (§3.2)
 }
 
 // What a session needs to know about feedback.
 export type FeedbackSettings = Pick<
   Settings,
-  'feedbackSound' | 'feedbackBelow' | 'resolveDirection' | 'alternateEvery'
+  | 'feedbackSound'
+  | 'feedbackBelow'
+  | 'resolveDirection'
+  | 'alternateEvery'
+  | 'feedbackWrong'
+  | 'feedbackCorrect'
+  | 'feedbackResolve'
 >
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -59,13 +70,31 @@ export const DEFAULT_SETTINGS: Settings = {
   feedbackBelow: 'B',
   resolveDirection: 'closest',
   alternateEvery: 1,
+  feedbackWrong: true,
+  feedbackCorrect: true,
+  feedbackResolve: true,
   keyCue: true,
 }
 
 export function feedbackSettings(settings: Settings): FeedbackSettings {
-  const { feedbackSound, feedbackBelow, resolveDirection, alternateEvery } =
-    settings
-  return { feedbackSound, feedbackBelow, resolveDirection, alternateEvery }
+  const {
+    feedbackSound,
+    feedbackBelow,
+    resolveDirection,
+    alternateEvery,
+    feedbackWrong,
+    feedbackCorrect,
+    feedbackResolve,
+  } = settings
+  return {
+    feedbackSound,
+    feedbackBelow,
+    resolveDirection,
+    alternateEvery,
+    feedbackWrong,
+    feedbackCorrect,
+    feedbackResolve,
+  }
 }
 
 export const MAX_GOAL_MINUTES = 240
@@ -83,6 +112,10 @@ function asCount(value: unknown, max: number, fallback: number): number {
     value <= max
     ? value
     : fallback
+}
+
+function asFlag(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback
 }
 
 function asOneOf<T>(choices: readonly T[], value: unknown, fallback: T): T {
@@ -114,6 +147,9 @@ export function sanitizeSettings(value: unknown): Settings {
       MAX_ALTERNATE_EVERY,
       d.alternateEvery,
     ),
-    keyCue: typeof raw.keyCue === 'boolean' ? raw.keyCue : d.keyCue,
+    feedbackWrong: asFlag(raw.feedbackWrong, d.feedbackWrong),
+    feedbackCorrect: asFlag(raw.feedbackCorrect, d.feedbackCorrect),
+    feedbackResolve: asFlag(raw.feedbackResolve, d.feedbackResolve),
+    keyCue: asFlag(raw.keyCue, d.keyCue),
   }
 }
