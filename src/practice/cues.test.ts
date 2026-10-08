@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   besideOf,
   EVERY_PART,
-  FEEDBACK_NOTE_MS,
-  FEEDBACK_STEP_MS,
+  FEEDBACK_TAIL_MS,
   KEY_CUE_GAP_MS,
   KEY_CUE_HOLD_MS,
   KEY_CUE_STEP_MS,
@@ -16,6 +15,7 @@ import {
   RIGHT_FEEDBACK_MS,
   SILENT_MISS_MS,
   silentCue,
+  TAKE_GAP_MS,
   TAPPED_PAUSE_MS,
   TEMPO_STEP_MS,
   type Cue,
@@ -170,41 +170,76 @@ describe('noteFeedbackCue parts', () => {
 })
 
 describe('melodyFeedbackCue', () => {
-  it('replays the melody, then tapped-versus-correct per wrong slot', () => {
-    const cue = melodyFeedbackCue([0, 2, 16], [0, 3, 5], 'normal')
-    expect(positions(cue)).toEqual([0, 2, 16, 3, 2, 17, 16])
-    const replayEnd = 3 * TEMPO_STEP_MS.normal
-    expect(cue.notes[3]?.atMs).toBe(replayEnd + FEEDBACK_STEP_MS)
-    expect(cue.notes[4]?.atMs).toBe(
-      replayEnd + FEEDBACK_STEP_MS + FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS,
-    )
+  const played = [0, 2, 16]
+  const tapped = [0, 3, 5] as const
+  const takeMs = 3 * TEMPO_STEP_MS.normal
+
+  it('plays the tapped take, a gap, then the correct take', () => {
+    const cue = melodyFeedbackCue(played, tapped, 'normal')
+    expect(positions(cue)).toEqual([0, 3, 17, 0, 2, 16])
+    expect(cue.notes.map((note) => note.atMs)).toEqual([
+      0,
+      600,
+      1200,
+      takeMs + TAKE_GAP_MS,
+      takeMs + TAKE_GAP_MS + 600,
+      takeMs + TAKE_GAP_MS + 1200,
+    ])
+    expect(cue.lengthMs).toBe(2 * takeMs + TAKE_GAP_MS + FEEDBACK_TAIL_MS)
   })
 
-  it('plays only the parts asked for per wrong slot', () => {
-    const played = [0, 2, 16]
-    const tapped = [0, 3, 5] as const
-    const replayEnd = 3 * TEMPO_STEP_MS.normal
+  it('marks each note with its slot and take', () => {
+    const cue = melodyFeedbackCue(played, tapped, 'normal')
+    expect(cue.notes.map((note) => note.slot)).toEqual([
+      { index: 0, take: 'tapped' },
+      { index: 1, take: 'tapped' },
+      { index: 2, take: 'tapped' },
+      { index: 0, take: 'played' },
+      { index: 1, take: 'played' },
+      { index: 2, take: 'played' },
+    ])
+  })
+
+  it('plays only the correct take for a clean melody', () => {
+    const cue = melodyFeedbackCue([0, 2], [0, 2], 'fast')
+    expect(positions(cue)).toEqual([0, 2])
+    expect(cue.notes.every((note) => note.slot?.take === 'played')).toBe(true)
+    expect(cue.lengthMs).toBe(2 * TEMPO_STEP_MS.fast + FEEDBACK_TAIL_MS)
+  })
+
+  it('keeps or drops each take with its part', () => {
     const wrong = melodyFeedbackCue(played, tapped, 'normal', {
       ...EVERY_PART,
       correct: false,
     })
-    expect(positions(wrong)).toEqual([0, 2, 16, 3, 17])
+    expect(positions(wrong)).toEqual([0, 3, 17])
     const correct = melodyFeedbackCue(played, tapped, 'normal', {
       ...EVERY_PART,
       wrong: false,
     })
-    expect(positions(correct)).toEqual([0, 2, 16, 2, 16])
-    expect(correct.notes[3]?.atMs).toBe(replayEnd + FEEDBACK_STEP_MS)
-    const neither = melodyFeedbackCue(played, tapped, 'normal', {
-      wrong: false,
-      correct: false,
-      resolve: true,
-    })
-    expect(positions(neither)).toEqual([0, 2, 16])
+    expect(positions(correct)).toEqual([0, 2, 16])
+    expect(correct.notes[0]?.atMs).toBe(0)
   })
 
-  it('only replays a clean melody', () => {
-    expect(positions(melodyFeedbackCue([0, 2], [0, 2], 'fast'))).toEqual([0, 2])
+  it('holds a miss at least as long as a silent one', () => {
+    const cue = melodyFeedbackCue([0, 2], [0, 3], 'fast', {
+      ...EVERY_PART,
+      correct: false,
+    })
+    expect(cue.lengthMs).toBe(SILENT_MISS_MS)
+  })
+
+  it('falls back to the silent cue with nothing to play', () => {
+    const none = { wrong: false, correct: false, resolve: true }
+    expect(melodyFeedbackCue(played, tapped, 'normal', none)).toEqual(
+      silentCue(false),
+    )
+    expect(
+      melodyFeedbackCue(played, [0, 2, 4], 'normal', {
+        ...none,
+        wrong: true,
+      }),
+    ).toEqual(silentCue(true))
   })
 })
 

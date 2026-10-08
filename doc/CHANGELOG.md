@@ -10,6 +10,16 @@ produced it.
 
 ---
 
+## 0.17.0 — 2026-10-08
+
+**Melody feedback plays the player's take, then the correct one.** On a miss
+the tapped degrees play as a melody, then after a gap the correct melody, both
+at the melody's tempo, instead of a replay followed by tapped-versus-correct
+pairs per wrong slot. A clean melody that sounds plays the correct take alone.
+The wrong and correct parts keep or drop their take; with neither the answer
+gets the silent feedback. Each note's slot lights with its key, and a wrong
+slot shows the right degree while the correct take plays (§6.3, §7.3).
+
 ## 0.16.0 — 2026-10-08
 
 **All-time totals on the Report.** Each preset keeps, per mode, how many sessions,

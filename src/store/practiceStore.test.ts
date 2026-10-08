@@ -202,6 +202,34 @@ describe('practiceStore', () => {
     expect(sounding()).toBeNull()
   })
 
+  it('lights each Melody feedback note’s slot while it sounds', () => {
+    const t = setup(allPassed('major'))
+    t.start({ mode: 'melody', melodyLength: 2 })
+    vi.advanceTimersByTime(SETTLE_MS)
+    const soundingSlot = () => t.store.getState().soundingSlot
+    for (const position of t.prompt()) {
+      t.store.getState().tap(degreeAt(position + 1) as Degree)
+    }
+    expect(soundingSlot()).toBeNull()
+    const [, , cue] = t.callsOf('play').at(-1)!
+    const { notes } = cue as Cue
+
+    let elapsed = 0
+    for (const note of notes) {
+      vi.advanceTimersByTime(note.atMs - elapsed)
+      expect(soundingSlot()).toEqual(note.slot)
+      elapsed = note.atMs
+    }
+    expect(notes.map((note) => note.slot?.take)).toEqual([
+      'tapped',
+      'tapped',
+      'played',
+      'played',
+    ])
+    vi.advanceTimersByTime(notes.at(-1)!.durationMs)
+    expect(soundingSlot()).toBeNull()
+  })
+
   it('lights the key cue’s keys, and keeps them lit through a stray tap', () => {
     const t = setup(undefined, DEFAULT_SETTINGS)
     t.start()

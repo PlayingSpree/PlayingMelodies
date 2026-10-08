@@ -2,7 +2,8 @@
 // for the screens, and the session in progress. It drives the pure session
 // runner — each action calls a runner step, keeps the new state, and carries
 // out the step's effects: audio through Sound, waits as timers that call the
-// runner back, and during feedback and the key cue which pad key is sounding.
+// runner back, and during feedback and the key cue which pad key (and Melody
+// slot) is sounding.
 // After every step it writes what changed through to storage: the records
 // when an answer was graded, new active time to today, and both to the
 // preset's all-time totals in this mode.
@@ -35,6 +36,7 @@ import {
   type SessionState,
   type SessionStep,
   type Cue,
+  type CueSlot,
   type Mode,
   type Settings,
 } from '../practice'
@@ -58,6 +60,8 @@ export interface PracticeStoreState {
   // pad so each sound can be matched to its key (§3.2, §6.1). Prompts never
   // light one.
   sounding: Degree | null
+  // In Melody feedback, the slot that note sounds for, lit on the Stage (§6.3).
+  soundingSlot: CueSlot | null
 
   // Must be called synchronously from the Start tap's handler: starting the
   // drone there is what unlocks audio on iOS (§2).
@@ -127,19 +131,22 @@ export function createPracticeStore({
       timers.add(timer)
     }
 
-    // Lights each note's key for as long as it sounds. A note that ends
-    // only clears the key it lit, so the next one may already have taken over.
+    const DARK = { sounding: null, soundingSlot: null }
+
+    // Lights each note's key, and its slot, for as long as it sounds. A note
+    // that ends only clears what it lit, so the next one may already have
+    // taken over.
     let notesLit = 0
     let litNote = 0
     function lightNotes(cue: Cue): void {
-      for (const { position, atMs, durationMs } of cue.notes) {
+      for (const { position, atMs, durationMs, slot } of cue.notes) {
         const note = ++notesLit
         wake(() => {
           litNote = note
-          set({ sounding: degreeAt(position) })
+          set({ sounding: degreeAt(position), soundingSlot: slot ?? null })
         }, atMs)
         wake(() => {
-          if (litNote === note) set({ sounding: null })
+          if (litNote === note) set(DARK)
         }, atMs + durationMs)
       }
     }
@@ -226,7 +233,7 @@ export function createPracticeStore({
       const { state, effects } = run(before)
       set({ session: state })
       persist(before, state)
-      if (!lights(state.phase.kind)) set({ sounding: null })
+      if (!lights(state.phase.kind)) set(DARK)
       // A paused or finished session needs no more callbacks.
       if (state.phase.kind === 'paused' || state.phase.kind === 'done') {
         clearTimers()
@@ -238,7 +245,7 @@ export function createPracticeStore({
       records: recordsOf(storage.state),
       session: null,
       lastOptions: storage.state.lastOptions,
-      sounding: null,
+      ...DARK,
 
       start(presetId, options) {
         clearTimers()
@@ -263,7 +270,7 @@ export function createPracticeStore({
           now(),
           rng,
         )
-        set({ session: state, lastOptions: options, sounding: null })
+        set({ session: state, lastOptions: options, ...DARK })
         storage.update((stored) => ({ ...stored, lastOptions: options }))
         carryOut(effects, state.phase.kind)
       },

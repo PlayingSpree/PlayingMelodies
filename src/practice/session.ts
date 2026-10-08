@@ -426,7 +426,7 @@ function grade(
   }
   const sounds = playsFeedback(state, result.correct)
   const parts = feedbackParts(state.setup.feedback)
-  // Melody's feedback replays the melody and has no resolve (§6.3).
+  // Melody's feedback plays whole takes and has no resolve (§6.3).
   const resolves =
     sounds &&
     parts.resolve &&

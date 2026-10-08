@@ -333,13 +333,21 @@ Opening at 3 rather than at a fully passed preset lets melodies start early.
 - **Entry:** a row of slots, one per note; each tap fills the next slot, with an
   undo key. Replay is free until the last slot is filled. Checking happens only
   then — per-note checking would give away the rest of the melody.
-- **Feedback:** each slot is marked ✓ or ✗, the melody replays as played, and each
-  wrong slot then plays tapped-versus-correct, with the same pause between them as
-  in Notes. The keys light as they sound, as in Notes. The feedback-notes setting
-  applies per melody: on misses only, a clean melody gets its ✓s in silence; on
-  never, every melody does. The parts setting (§6.1) keeps the wrong or the
-  correct note of each pair, or neither; the replay always plays, and Melody
-  has no resolve.
+- **Feedback:** each slot is marked ✓ or ✗, with the correct degree under each ✗.
+  On a miss the app then plays the player's **take** — the tapped degrees as a
+  melody, each in the octave of the note it answered — a gap, then the
+  **correct take**, both at the melody's tempo. It is Notes' tapped-then-correct
+  heard whole: a wrong note is easiest to place inside the line that gives it
+  its meaning, and correcting slot by slot pulled it out of that line and
+  sounded like extra notes tacked on. Each note's key lights as it sounds, as in
+  Notes, and so does its **slot**; while the correct take plays, a wrong slot
+  shows the right degree. The feedback-notes setting applies per melody: on
+  misses only, a clean melody gets its ✓s in silence; on never, every melody
+  does; a clean melody that does sound plays the correct take alone. The parts
+  setting (§6.1) keeps or drops each take — the wrong note the player's, the
+  correct note the correct one — and with neither left the answer gets the
+  silent feedback; a miss is never held shorter than that. Melody has no
+  resolve.
 - **Grading:** a melody is **clean** only if every note is right. The preset's
   **melody grade** is the share of clean melodies over its last 10, on the same
   letter bands as §5. Wrong notes feed the confusion log; nothing else (§5).
@@ -388,7 +396,7 @@ presets and modes.
   draining; in Melody, the answer slots and undo.
 - After an answer the pad keeps the tapped key marked right or wrong, and on a
   miss outlines the correct one; during feedback and the key cue the key whose
-  note is sounding lights up (§3.2, §6.1).
+  note is sounding lights up (§3.2, §6.1), and in Melody its slot too (§6.3).
 - While a session is paused (§6), a cover with **Resume** hides everything but the
   top bar, so Quit still works.
 

@@ -9,6 +9,7 @@ import { useEffect } from 'react'
 import {
   SPEED_LIMIT_MS,
   unlockedDegrees,
+  type CueSlot,
   type SessionAnswer,
   type SessionPhase,
   type SessionState,
@@ -52,26 +53,39 @@ function keyMarks(answer: SessionAnswer): Partial<Record<Degree, KeyMark>> {
   }
 }
 
+// Melody's slots: filled as the player taps; once checked, each right or
+// wrong with the correct degree under a miss. During feedback the slot whose
+// note is sounding lights up, and while the correct take plays a wrong slot
+// shows the right degree (§6.3).
 function Slots({
   count,
   filled,
   answer,
+  lit,
 }: {
   count: number
   filled: readonly Degree[]
   answer: SessionAnswer | null
+  lit: CueSlot | null
 }) {
   return (
     <div className="flex justify-center gap-2">
       {Array.from({ length: count }, (_, i) => {
-        const degree = answer ? answer.tapped[i] : filled[i]
-        const right = answer?.slots[i]
         const played = answer?.played[i]
+        const lights = lit?.index === i
+        const showsPlayed = lights && lit?.take === 'played'
+        const right = showsPlayed || answer?.slots[i]
+        const degree = answer
+          ? showsPlayed
+            ? played
+            : answer.tapped[i]
+          : filled[i]
         return (
           <div key={i} className="flex flex-col items-center gap-1">
             <div
               className={cx(
-                'flex h-14 w-12 items-center justify-center rounded-xl border-2 text-xl font-extrabold',
+                'flex h-14 w-12 items-center justify-center rounded-xl border-2 text-xl font-extrabold transition-transform',
+                lights && 'z-10 scale-110 shadow-glow ring-4 ring-ink',
                 answer === null &&
                   degree === undefined &&
                   'border-dashed border-muted-border',
@@ -86,7 +100,7 @@ function Slots({
               {degree === undefined ? '' : degreeLabel(degree)}
             </div>
             <span className="h-5 text-sm font-bold text-primary-light">
-              {right === false && played !== undefined
+              {answer?.slots[i] === false && played !== undefined
                 ? degreeLabel(played)
                 : ''}
             </span>
@@ -97,7 +111,13 @@ function Slots({
   )
 }
 
-function Status({ session }: { session: SessionState }) {
+function Status({
+  session,
+  soundingSlot,
+}: {
+  session: SessionState
+  soundingSlot: CueSlot | null
+}) {
   const { phase, setup, answers } = session
   const { mode } = setup.options
 
@@ -118,6 +138,7 @@ function Status({ session }: { session: SessionState }) {
         count={count}
         filled={phase.kind === 'answering' ? phase.slots : []}
         answer={phase.kind === 'feedback' ? phase.answer : null}
+        lit={phase.kind === 'feedback' ? soundingSlot : null}
       />
     )
   }
@@ -173,6 +194,7 @@ function PausedCover({ onResume }: { onResume: () => void }) {
 export function Stage() {
   const session = usePractice((s) => s.session)
   const sounding = usePractice((s) => s.sounding)
+  const soundingSlot = usePractice((s) => s.soundingSlot)
 
   useEffect(() => {
     const onChange = () => {
@@ -211,7 +233,7 @@ export function Stage() {
 
       <div className="relative flex flex-1 flex-col gap-4">
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <Status session={session} />
+          <Status session={session} soundingSlot={soundingSlot} />
         </div>
 
         {options.mode === 'melody' && (

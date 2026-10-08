@@ -10,6 +10,15 @@ export interface CueNote {
   position: number
   atMs: number // from the start of the cue
   durationMs: number
+  // Melody feedback only: the slot the note sounds for (§6.3).
+  slot?: CueSlot
+}
+
+// A melody slot, in the player's take or the correct one, lit on the Stage
+// while its note sounds.
+export interface CueSlot {
+  index: number
+  take: 'tapped' | 'played'
 }
 
 export interface Cue {
@@ -34,8 +43,9 @@ export const TAPPED_PAUSE_MS = 700
 export const RESOLVE_STEP_MS = 900
 export const RESOLVE_HOLD_MS = 1500
 export const FEEDBACK_TAIL_MS = 800
-// Melody's tapped-versus-correct pairs start this far apart (§6.3).
-export const FEEDBACK_STEP_MS = 1000
+// Melody's two takes, the player's then the correct one, sit this far apart
+// (§6.3), so the second isn't heard as more of the first.
+export const TAKE_GAP_MS = 1000
 
 // Melody notes are evenly spaced (§6.3); each sounds for most of its step.
 export const TEMPO_STEP_MS: Readonly<Record<Tempo, number>> = {
@@ -164,34 +174,42 @@ export function noteFeedbackCue(
   }
 }
 
-// A checked melody (§6.3): it replays as played, then each wrong slot plays
-// tapped-versus-correct, or whichever of the two `parts` keeps. Melody has
-// no resolve.
+// A checked melody (§6.3): on a miss the player's take — each tapped degree
+// in the octave of the note it answered — then the correct take, at the
+// melody's tempo. A clean melody plays only the correct take. The wrong and
+// correct parts keep or drop their take; with neither left it is the silent
+// cue, and a miss never ends sooner than one. Melody has no resolve.
 export function melodyFeedbackCue(
   played: readonly number[],
   tapped: readonly Degree[],
   tempo: Tempo,
   parts: FeedbackParts = EVERY_PART,
 ): Cue {
-  const replay = promptCue(played, tempo)
-  const notes = [...replay.notes]
-  let at = replay.lengthMs
-  played.forEach((position, i) => {
-    const answer = tapped[i]
-    if (answer === undefined || answer === degreeAt(position)) return
-    if (!parts.wrong && !parts.correct) return
-    at += FEEDBACK_STEP_MS
-    if (parts.wrong) {
-      notes.push({
-        position: besideOf(position, answer),
-        atMs: at,
-        durationMs: FEEDBACK_NOTE_MS,
-      })
-      if (parts.correct) at += FEEDBACK_NOTE_MS + TAPPED_PAUSE_MS
-    }
-    if (parts.correct) {
-      notes.push({ position, atMs: at, durationMs: FEEDBACK_NOTE_MS })
-    }
+  const right = played.every((position, i) => tapped[i] === degreeAt(position))
+  const takes: CueSlot['take'][] = []
+  if (parts.wrong && !right) takes.push('tapped')
+  if (parts.correct) takes.push('played')
+  if (takes.length === 0) return silentCue(right)
+
+  const notes: CueNote[] = []
+  let at = 0
+  takes.forEach((take, n) => {
+    if (n > 0) at += TAKE_GAP_MS
+    const positions =
+      take === 'played'
+        ? played
+        : played.map((position, i) =>
+            besideOf(position, tapped[i] ?? degreeAt(position)),
+          )
+    const cue = promptCue(positions, tempo)
+    cue.notes.forEach((note, index) => {
+      notes.push({ ...note, atMs: at + note.atMs, slot: { index, take } })
+    })
+    at += cue.lengthMs
   })
-  return { notes, lengthMs: at + FEEDBACK_STEP_MS + FEEDBACK_TAIL_MS }
+  const lengthMs = at + FEEDBACK_TAIL_MS
+  return {
+    notes,
+    lengthMs: right ? lengthMs : Math.max(lengthMs, SILENT_MISS_MS),
+  }
 }
