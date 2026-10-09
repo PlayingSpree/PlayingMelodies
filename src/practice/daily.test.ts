@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addActiveMinutes,
   computeStreak,
+  goalMinutesLeft,
   localDateKey,
   previousDateKey,
   type DailyRecords,
@@ -29,6 +30,15 @@ describe('addActiveMinutes', () => {
     const once = addActiveMinutes({}, '2026-10-04', 2.5)
     const twice = addActiveMinutes(once, '2026-10-04', 1)
     expect(twice).toEqual(days(['2026-10-04', 3.5]))
+  })
+})
+
+describe('goalMinutesLeft', () => {
+  it('is the goal less today, never below zero', () => {
+    const records = days(['2026-10-03', 9], ['2026-10-04', 3.5])
+    expect(goalMinutesLeft(records, 10, '2026-10-04')).toBe(6.5)
+    expect(goalMinutesLeft(records, 10, '2026-10-05')).toBe(10)
+    expect(goalMinutesLeft(records, 3, '2026-10-04')).toBe(0)
   })
 })
 

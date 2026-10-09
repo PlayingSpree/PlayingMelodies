@@ -17,6 +17,7 @@ import {
   endSession,
   feedbackSettings,
   freshProgress,
+  goalMinutesLeft,
   isEmptyTotals,
   localDateKey,
   recordTotals,
@@ -24,6 +25,7 @@ import {
   statsOf,
   pause,
   replay,
+  resolveLength,
   resume,
   startSession,
   tap,
@@ -257,11 +259,18 @@ export function createPracticeStore({
           confusions: records.confusions,
           progress: records.presetProgress[presetId] ?? freshProgress(preset),
         }
-        const { register, keyCue } = settings()
+        const { register, keyCue, goalMinutes } = settings()
+        const todayKey = localDateKey(new Date(now()))
+        const left = goalMinutesLeft(
+          records.dailyRecords,
+          goalMinutes,
+          todayKey,
+        )
         const { state, effects } = startSession(
           {
             preset,
             options,
+            length: resolveLength(options.length, left),
             register,
             feedback: feedbackSettings(settings()),
             keyCue,

@@ -1,10 +1,13 @@
 // The session sheet (DESIGN.md §7.2): a bottom sheet over Home for the open
-// tab's mode, with the length, the tonic lock, the tonic change interval, and
+// tab's mode, with the length (Daily: what's left of today's goal), the tonic lock, the tonic change interval, and
 // Melody's length and tempo. Home only opens it on a preset where that mode
 // is open.
 
 import { useState, type ReactNode } from 'react'
 import {
+  DEFAULT_SESSION_OPTIONS,
+  goalMinutesLeft,
+  localDateKey,
   MELODY_LENGTHS,
   PROMPT_COUNTS,
   SESSION_MINUTES,
@@ -12,9 +15,9 @@ import {
   TONIC_CHANGE_EVERY,
   type SessionOptions,
 } from '../practice'
-import { practiceStore, usePractice } from '../store'
+import { practiceStore, usePractice, useSettings } from '../store'
 import { getPreset, type PresetId } from '../theory'
-import { MODE_LABELS, pitchName, TEMPO_LABELS } from './labels'
+import { formatMinutes, MODE_LABELS, pitchName, TEMPO_LABELS } from './labels'
 import { Chip, RaisedButton, SectionLabel } from './ui'
 
 const CHIP = 'px-3 py-1.5 text-sm'
@@ -36,9 +39,18 @@ export function SessionSheet({
   onClose: () => void
 }) {
   const preset = getPreset(presetId)
-  // The remembered options; their mode is Home's open tab.
+  const dailyRecords = usePractice((s) => s.records.dailyRecords)
+  const goal = useSettings((s) => s.settings.goalMinutes)
+  const [todayKey] = useState(() => localDateKey(new Date()))
+  const left = goalMinutesLeft(dailyRecords, goal, todayKey)
+  // The remembered options; their mode is Home's open tab. Daily with the
+  // goal met has nothing to run, so the sheet opens on the default length.
   const lastOptions = usePractice((s) => s.lastOptions)
-  const [options, setOptions] = useState<SessionOptions>(lastOptions)
+  const [options, setOptions] = useState<SessionOptions>(() =>
+    lastOptions.length.kind === 'daily' && left <= 0
+      ? { ...lastOptions, length: DEFAULT_SESSION_OPTIONS.length }
+      : lastOptions,
+  )
   const set = (patch: Partial<SessionOptions>) =>
     setOptions((current) => ({ ...current, ...patch }))
 
@@ -85,6 +97,17 @@ export function SessionSheet({
               {minutes} min
             </Chip>
           ))}
+          {left > 0 ? (
+            <Chip
+              className={CHIP}
+              selected={length.kind === 'daily'}
+              onClick={() => set({ length: { kind: 'daily' } })}
+            >
+              Daily · {formatMinutes(left)} min
+            </Chip>
+          ) : (
+            <Chip className={`${CHIP} opacity-50`}>Goal met</Chip>
+          )}
         </Row>
 
         {options.mode === 'melody' && (

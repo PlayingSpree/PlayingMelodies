@@ -12,11 +12,22 @@ import {
   timeout,
   type SessionState,
 } from './session'
-import { DEFAULT_SESSION_OPTIONS, type SessionOptions } from './sessionOptions'
+import {
+  DEFAULT_SESSION_OPTIONS,
+  resolveLength,
+  type SessionOptions,
+} from './sessionOptions'
 import { DEFAULT_SETTINGS, feedbackSettings } from './settings'
 import { emptyStatsMap, recordNotesOutcome, recordSpeedTime } from './stats'
 
 const MAJOR = getPreset('major')
+
+// The setup's options and the length they resolve to; Daily has nothing
+// left of the goal here, so it gets the default.
+function setupOptions(options: Partial<SessionOptions>) {
+  const full = { ...DEFAULT_SESSION_OPTIONS, ...options }
+  return { options: full, length: resolveLength(full.length, 0) }
+}
 
 function practice(passedAll = false): PracticeSlice {
   return {
@@ -44,7 +55,7 @@ function play(
   let state = startSession(
     {
       preset: MAJOR,
-      options: { ...DEFAULT_SESSION_OPTIONS, ...options },
+      ...setupOptions(options),
       register: 1,
       feedback: feedbackSettings(DEFAULT_SETTINGS),
       keyCue: false,

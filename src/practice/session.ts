@@ -36,7 +36,11 @@ import { dealDegree, placeDegree, type Rng } from './dealer'
 import { gradeAnswer, type Answer, type PracticeSlice } from './grading'
 import { generateMelody } from './melody'
 import { dealableDegrees, isModeOpen, melodyGrade } from './progress'
-import type { PitchClass, SessionOptions } from './sessionOptions'
+import type {
+  PitchClass,
+  SessionLength,
+  SessionOptions,
+} from './sessionOptions'
 import type { FeedbackSettings } from './settings'
 import { gradeBelow, SPEED_LIMIT_MS, windowGrade } from './stats'
 import { pickTonic, tonicMidi } from './tonic'
@@ -52,6 +56,9 @@ export const KEY_CUE_DELAY_MS = 1000
 export interface SessionSetup {
   preset: Preset
   options: SessionOptions
+  // What the session runs for: the options' length, with Daily resolved
+  // to the minutes left of the goal at Start (§7.2).
+  length: SessionLength
   register: RegisterOctaves
   feedback: FeedbackSettings
   // 1–5–1 on each tonic before its first prompt (§3.2, §7.5).
@@ -169,7 +176,7 @@ export function startSession(
 }
 
 function lengthMet(state: SessionState): boolean {
-  const { length } = state.setup.options
+  const { length } = state.setup
   return length.kind === 'prompts'
     ? state.answers.length >= length.count
     : state.activity.activeMs >= length.minutes * 60_000

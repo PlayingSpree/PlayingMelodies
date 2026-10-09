@@ -21,7 +21,11 @@ import {
   type SessionState,
   type SessionStep,
 } from './session'
-import { DEFAULT_SESSION_OPTIONS, type SessionOptions } from './sessionOptions'
+import {
+  DEFAULT_SESSION_OPTIONS,
+  resolveLength,
+  type SessionOptions,
+} from './sessionOptions'
 import {
   DEFAULT_SETTINGS,
   feedbackSettings,
@@ -52,6 +56,13 @@ function practiceWith(progress: Partial<PresetProgress> = {}): PracticeSlice {
 }
 
 // Every Major degree open and passed: Speed and Melody both open.
+// The setup's options and the length they resolve to; Daily has nothing
+// left of the goal here, so it gets the default.
+function setupOptions(options: Partial<SessionOptions>) {
+  const full = { ...DEFAULT_SESSION_OPTIONS, ...options }
+  return { options: full, length: resolveLength(full.length, 0) }
+}
+
 const ALL_PASSED = practiceWith({
   unlockedCount: MAJOR.order.length,
   passed: [...MAJOR.order],
@@ -69,7 +80,7 @@ function start(
   return startSession(
     {
       preset: MAJOR,
-      options: { ...DEFAULT_SESSION_OPTIONS, ...options },
+      ...setupOptions(options),
       register: 1,
       feedback: { ...feedbackSettings(DEFAULT_SETTINGS), ...feedback },
       keyCue,

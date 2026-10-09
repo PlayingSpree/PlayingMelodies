@@ -31,7 +31,7 @@ function promptOpen(phase: SessionPhase): boolean {
 }
 
 function progressText({ setup, answers, phase, activity }: SessionState) {
-  const { length } = setup.options
+  const { length } = setup
   if (length.kind === 'minutes') {
     const left = Math.max(0, length.minutes - activity.activeMs / 60_000)
     return `${formatMinutes(left)} min left`

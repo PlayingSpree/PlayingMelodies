@@ -42,6 +42,15 @@ export function addActiveMinutes(
   return { ...records, [dateKey]: { date: dateKey, activeMinutes } }
 }
 
+// What is left of today's goal, in minutes; zero once it's met.
+export function goalMinutesLeft(
+  records: DailyRecords,
+  goalMinutes: number,
+  todayKey: string,
+): number {
+  return Math.max(0, goalMinutes - (records[todayKey]?.activeMinutes ?? 0))
+}
+
 export function meetsGoal(
   record: DailyRecord | undefined,
   goalMinutes: number,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SESSION_OPTIONS,
+  resolveLength,
   sanitizeSessionOptions,
   type SessionOptions,
 } from './sessionOptions'
@@ -44,5 +45,31 @@ describe('sanitizeSessionOptions', () => {
     expect(
       sanitizeSessionOptions({ length: { kind: 'minutes', count: 10 } }).length,
     ).toEqual(DEFAULT_SESSION_OPTIONS.length)
+  })
+
+  it('keeps Daily', () => {
+    expect(
+      sanitizeSessionOptions({ length: { kind: 'daily' } }).length,
+    ).toEqual({ kind: 'daily' })
+  })
+})
+
+describe('resolveLength', () => {
+  it('passes a fixed length through', () => {
+    const length = { kind: 'minutes', minutes: 5 } as const
+    expect(resolveLength(length, 2)).toEqual(length)
+  })
+
+  it('runs Daily for what is left of the goal', () => {
+    expect(resolveLength({ kind: 'daily' }, 6.5)).toEqual({
+      kind: 'minutes',
+      minutes: 6.5,
+    })
+  })
+
+  it('falls back to the default once the goal is met', () => {
+    expect(resolveLength({ kind: 'daily' }, 0)).toEqual(
+      DEFAULT_SESSION_OPTIONS.length,
+    )
   })
 })

@@ -10,6 +10,13 @@ produced it.
 
 ---
 
+## 0.18.0 — 2026-10-09
+
+**A Daily session length.** Next to the fixed lengths, the session sheet offers
+Daily: a timed session for whatever is left of today's goal when it starts. With
+the goal met it can't be picked, and a sheet that would open on it opens on the
+default (§7.2).
+
 ## 0.17.0 — 2026-10-08
 
 **Melody feedback plays the player's take, then the correct one.** On a miss

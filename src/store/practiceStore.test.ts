@@ -286,6 +286,29 @@ describe('practiceStore', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
+  it('runs Daily for what is left of today’s goal, and remembers Daily', () => {
+    const storage = memoryStorage()
+    const date = localDateKey(new Date())
+    storage.update((state) => ({
+      ...state,
+      dailyRecords: { [date]: { date, activeMinutes: 4 } },
+    }))
+    const store = createPracticeStore({
+      storage,
+      sound: recordingSound(),
+      settings: () => ({ ...NO_KEY_CUE, goalMinutes: 10 }),
+    })
+    store.getState().start('major', {
+      ...DEFAULT_SESSION_OPTIONS,
+      length: { kind: 'daily' },
+    })
+    expect(store.getState().session?.setup.length).toEqual({
+      kind: 'minutes',
+      minutes: 6,
+    })
+    expect(storage.state.lastOptions.length).toEqual({ kind: 'daily' })
+  })
+
   it('changes the tonic every X answers: retune, settle, then go on', () => {
     const t = setup()
     t.start({ tonicChangeEvery: 10, length: { kind: 'prompts', count: 20 } })

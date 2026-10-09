@@ -380,11 +380,16 @@ for a phone in portrait, one-thumb reachable.
 ### 7.2 Session sheet
 
 The mode is the Home tab's (§7.1); the sheet has no mode picker, so there is one
-place to choose it. The sheet holds the **length** (10 / 20 / 40 prompts or
-3 / 5 / 10 minutes, default 20 prompts — a melody counts as one prompt), tonic
-lock, tonic change every X, and for Melody its length and tempo. It opens on the
-choices the last session started with, saved across reloads and shared by all
+place to choose it. The sheet holds the **length** (10 / 20 / 40 prompts,
+3 / 5 / 10 minutes, or Daily; default 20 prompts — a melody counts as one prompt),
+tonic lock, tonic change every X, and for Melody its length and tempo. It opens on
+the choices the last session started with, saved across reloads and shared by all
 presets and modes.
+
+- **Daily** runs for whatever is left of today's goal (§7.5), fixed when the
+  session starts, so finishing it meets the goal; its button shows those minutes.
+  Once the goal is met there is nothing left to run: the button says so and can't
+  be picked, and a sheet that would open on Daily opens on the default instead.
 
 ### 7.3 Stage and the answer pad
 
