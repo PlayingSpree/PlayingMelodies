@@ -32,11 +32,13 @@ import {
   type TotalsMap,
 } from '../practice'
 import {
+  BUILT_IN_PRESET_IDS,
   DEGREES,
   getPreset,
   isDegree,
   isPresetId,
   PRESET_IDS,
+  type BuiltInPresetId,
   type Degree,
   type PresetId,
 } from '../theory'
@@ -55,8 +57,9 @@ export interface PersistedState {
   // Absent means the preset has no stats yet.
   presetStats: PresetStatsMap
   confusions: readonly LoggedConfusion[]
-  // Absent means the preset was never played: it opens fresh.
-  presetProgress: Readonly<Partial<Record<PresetId, PresetProgress>>>
+  // Absent means the preset was never played: it opens fresh. Mix-ups has
+  // none; it opens fresh every session.
+  presetProgress: Readonly<Partial<Record<BuiltInPresetId, PresetProgress>>>
   // Absent means the preset was never played in that mode.
   totals: TotalsMap
   dailyRecords: DailyRecords
@@ -154,7 +157,7 @@ export function sanitizeConfusions(value: unknown): LoggedConfusion[] {
 // A preset's record, held to its own invariants: the unlocked count within
 // the preset, and passes only for degrees that are open.
 export function sanitizePresetProgress(
-  id: PresetId,
+  id: BuiltInPresetId,
   value: unknown,
 ): PresetProgress {
   const preset = getPreset(id)
@@ -181,10 +184,10 @@ export function sanitizePresetProgress(
 
 export function sanitizePresetProgressMap(
   value: unknown,
-): Partial<Record<PresetId, PresetProgress>> {
+): Partial<Record<BuiltInPresetId, PresetProgress>> {
   const raw = asRecord(value)
-  const map: Partial<Record<PresetId, PresetProgress>> = {}
-  for (const id of PRESET_IDS) {
+  const map: Partial<Record<BuiltInPresetId, PresetProgress>> = {}
+  for (const id of BUILT_IN_PRESET_IDS) {
     if (id in raw) map[id] = sanitizePresetProgress(id, raw[id])
   }
   return map

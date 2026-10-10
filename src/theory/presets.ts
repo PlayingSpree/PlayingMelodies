@@ -1,10 +1,16 @@
 // The built-in presets (DESIGN.md §4): named, ordered degree lists. The order
 // is the unlock order and the starting count how much of it a fresh preset
-// opens, both kept as data so changing one is a one-line edit.
+// opens, both kept as data so changing one is a one-line edit. Mix-ups is a
+// preset too, but has no fixed degrees: practice/mixups.ts builds them from
+// the confusion log.
 
 import { parseDegrees, type Degree } from './degrees'
 
-export type PresetId = 'major' | 'minor' | 'chromatic'
+export type BuiltInPresetId = 'major' | 'minor' | 'chromatic'
+
+export const MIXUPS_ID = 'mixups'
+
+export type PresetId = BuiltInPresetId | typeof MIXUPS_ID
 
 export interface Preset {
   id: PresetId
@@ -14,7 +20,11 @@ export interface Preset {
   startUnlocked: number
 }
 
-export const PRESETS: readonly Preset[] = [
+export interface BuiltInPreset extends Preset {
+  id: BuiltInPresetId
+}
+
+export const PRESETS: readonly BuiltInPreset[] = [
   {
     id: 'major',
     name: 'Major',
@@ -35,17 +45,27 @@ export const PRESETS: readonly Preset[] = [
   },
 ]
 
-export const PRESET_IDS: readonly PresetId[] = PRESETS.map(
+export const BUILT_IN_PRESET_IDS: readonly BuiltInPresetId[] = PRESETS.map(
   (preset) => preset.id,
 )
+
+// Every id that keeps stats, confusions and totals: Mix-ups included.
+export const PRESET_IDS: readonly PresetId[] = [
+  ...BUILT_IN_PRESET_IDS,
+  MIXUPS_ID,
+]
 
 export function isPresetId(value: unknown): value is PresetId {
   return PRESET_IDS.some((id) => id === value)
 }
 
-export function getPreset(id: PresetId): Preset {
+export function isBuiltInPresetId(value: unknown): value is BuiltInPresetId {
+  return BUILT_IN_PRESET_IDS.some((id) => id === value)
+}
+
+export function getPreset(id: BuiltInPresetId): BuiltInPreset {
   const preset = PRESETS.find((candidate) => candidate.id === id)
-  // Unreachable: PresetId names exactly the entries above.
+  // Unreachable: BuiltInPresetId names exactly the entries above.
   if (preset === undefined) throw new Error(`Unknown preset '${id}'`)
   return preset
 }

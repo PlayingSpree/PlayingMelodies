@@ -15,7 +15,12 @@ import {
   type Settings,
 } from '../practice'
 import { defaultState } from '../storage'
-import { degreeAt, getPreset, type Degree, type PresetId } from '../theory'
+import {
+  degreeAt,
+  getPreset,
+  type Degree,
+  type BuiltInPresetId,
+} from '../theory'
 import { createPracticeStore } from './practiceStore'
 import { memoryStorage, recordingSound } from './testing'
 
@@ -28,7 +33,7 @@ function seeded(seed = 1): () => number {
   }
 }
 
-function allPassed(id: PresetId): PresetProgress {
+function allPassed(id: BuiltInPresetId): PresetProgress {
   const { order } = getPreset(id)
   return {
     unlockedCount: order.length,
@@ -513,6 +518,46 @@ describe('practiceStore', () => {
     t.start()
     const practice = t.store.getState().session?.practice
     expect(practice?.degreeStats[played]?.outcomes).toEqual([true])
+  })
+
+  it('runs Mix-ups on the confused degrees, keeping stats but no progress', () => {
+    const t = setup()
+    const startMixups = () =>
+      t.store.getState().start('mixups', DEFAULT_SESSION_OPTIONS)
+    startMixups()
+    expect(t.store.getState().session).toBeNull()
+
+    // 3 for 4 in Major, ♭3 for 3 in Chromatic.
+    t.storage.update((state) => ({
+      ...state,
+      confusions: [
+        { preset: 'major', played: 4, tapped: 5 },
+        { preset: 'chromatic', played: 3, tapped: 4 },
+      ],
+    }))
+    const reloaded = createPracticeStore({
+      storage: t.storage,
+      sound: recordingSound(),
+      settings: () => NO_KEY_CUE,
+      rng: seeded(),
+    })
+    reloaded.getState().start('mixups', DEFAULT_SESSION_OPTIONS)
+    const session = () => reloaded.getState().session
+    expect(session()?.setup.preset.order).toEqual([3, 4, 5])
+    const dealt = new Set<Degree>()
+    // Enough right answers that a built-in preset would pass a degree.
+    for (let i = 0; i < 20; i++) {
+      vi.advanceTimersByTime(SETTLE_MS + 5_000)
+      const phase = session()?.phase
+      if (phase?.kind !== 'answering') continue
+      const played = degreeAt(phase.prompt[0]!)
+      dealt.add(played)
+      reloaded.getState().tap(played)
+    }
+    expect([...dealt].sort()).toEqual([3, 4, 5])
+    expect(session()?.newlyPassed).toEqual([])
+    expect(t.storage.state.presetStats.mixups).toBeDefined()
+    expect(t.storage.state.presetProgress).toEqual({})
   })
 
   it('resets one preset to fresh, stats and confusions too, leaving the others', () => {

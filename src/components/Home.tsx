@@ -2,18 +2,23 @@
 // then a tab per mode, each with one card per preset showing that mode's
 // ratings: Notes its letter grades, Speed its stars, Melody its melody grade.
 // Tapping an open card opens its session sheet in the tab's mode; a card
-// whose mode is still locked says what opens it. The gear opens Settings. A
-// card on top offers a reload when a new version of the app is waiting.
+// whose mode is still locked says what opens it. Notes ends on Mix-ups, built
+// from the recent confusions. The gear opens Settings. A card on top offers a
+// reload when a new version of the app is waiting.
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import {
+  buildMixups,
   computeStreak,
   freshProgress,
   isModeOpen,
   localDateKey,
   MELODY_OPENS_AT,
   melodyGrade,
+  mixupPairCount,
+  MIXUPS_MIN_PAIRS,
+  MIXUPS_NAME,
   MODES,
   presetGrade,
   presetStar,
@@ -26,7 +31,14 @@ import {
 } from '../practice'
 import { reloadToUpdate, useUpdateReady } from '../pwa'
 import { practiceStore, usePractice, useSettings } from '../store'
-import { degreeLabel, PRESETS, type Preset, type PresetId } from '../theory'
+import {
+  degreeLabel,
+  isBuiltInPresetId,
+  MIXUPS_ID,
+  PRESETS,
+  type Preset,
+  type PresetId,
+} from '../theory'
 import { cx } from './cx'
 import {
   formatMinutes,
@@ -114,6 +126,7 @@ export function Home({
           onOpen={() => onOpen(preset.id)}
         />
       ))}
+      {mode === 'notes' && <MixupsCard onOpen={() => onOpen(MIXUPS_ID)} />}
     </div>
   )
 }
@@ -129,21 +142,59 @@ function StarMark({ star }: { star: Star | 'none' | null }) {
   return <span className={STAR_TEXT[star]}>★</span>
 }
 
+// Mix-ups (§4): Notes only, its degrees built from the recent confusions as
+// they stand, so they can change between sessions; its detail names the pairs
+// they come from. Locked until enough different pairs have been mixed up.
+function MixupsCard({ onOpen }: { onOpen: () => void }) {
+  const confusions = usePractice((s) => s.records.confusions)
+  const mixups = buildMixups(confusions)
+  if (mixups === null) {
+    const pairs = Math.min(mixupPairCount(confusions), MIXUPS_MIN_PAIRS)
+    return (
+      <Card className="flex items-center justify-between gap-3 p-4 opacity-60">
+        <div className="flex flex-col">
+          <span className="text-xl font-extrabold">{MIXUPS_NAME}</span>
+          <span className="text-sm font-semibold text-ink-muted">
+            {`Mix up ${MIXUPS_MIN_PAIRS} different pairs · ${pairs} / ${MIXUPS_MIN_PAIRS}`}
+          </span>
+        </div>
+        <span className="text-3xl font-extrabold">🔒</span>
+      </Card>
+    )
+  }
+  return (
+    <PresetCard
+      preset={mixups.preset}
+      mode="notes"
+      detail={mixups.pairs
+        .map(({ low, high }) => `${degreeLabel(low)}↔${degreeLabel(high)}`)
+        .join(' · ')}
+      onOpen={onOpen}
+    />
+  )
+}
+
 function PresetCard({
   preset,
   mode,
+  detail: detailOverride,
   onOpen,
 }: {
   preset: Preset
   mode: Mode
+  // In place of the mode's own detail line.
+  detail?: string
   onOpen: () => void
 }) {
   const stats = usePractice((s) => statsOf(s.records.presetStats, preset.id))
   // Defaulted outside the selector: a fresh object per call would re-render
-  // forever.
+  // forever. Mix-ups keeps no progress: everything open, nothing passed.
   const progress =
-    usePractice((s) => s.records.presetProgress[preset.id]) ??
-    freshProgress(preset)
+    usePractice((s) =>
+      isBuiltInPresetId(preset.id)
+        ? s.records.presetProgress[preset.id]
+        : undefined,
+    ) ?? freshProgress(preset)
   const open = isModeOpen(preset, progress, mode)
   const passed = progress.passed.length
   const total = preset.order.length
@@ -172,6 +223,7 @@ function PresetCard({
       break
     }
   }
+  if (detailOverride !== undefined) detail = detailOverride
   if (!open) {
     rating = '🔒'
     detail =

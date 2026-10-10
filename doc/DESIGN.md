@@ -4,7 +4,7 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.13.0** (2026-10-07). Revision history lives in
+Spec version: **0.19.0** (2026-10-10). Revision history lives in
 [CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
 sequencing is intentionally left outside this document.
 
@@ -19,7 +19,8 @@ sequencing is intentionally left outside this document.
   stars), and **Melody** (2–6 degrees in a row, entered in order) (§6).
 - **Presets:** Major, Minor and Chromatic (all 12 degrees), each unlocking
   flashcard-style — a few degrees open, 1 more each time everything open has
-  passed (§4).
+  passed (§4). **Mix-ups** is a fourth, built from the player's recent confusions
+  instead of a fixed list (§4).
 - **Stats and progress are per preset**; stats are per degree within it,
   independent of tonic and octave (§4, §5).
 - Client-side only: an installable, offline PWA persisting to `localStorage`, with
@@ -172,6 +173,27 @@ first session; Chromatic starts with 3 and ♭3, the contrast it exists to drill
 - Only **Notes** answers count toward passing — not Speed, not Melody (§6).
 - Progress can be reset per preset in Settings.
 
+**Mix-ups** drills the degrees the player confuses, side by side. Its degrees
+aren't data but come from the confusion log (§5), rebuilt each time a session
+starts and fixed for that session:
+
+- It reads the newest **30 wrong answers** given in the other presets, in any mode
+  — counted in answers rather than days, so a break doesn't empty it. Its own wrong
+  answers are left out, so it never feeds on itself.
+- It takes their most frequent pairs (a tie goes to the more recent) and opens
+  **both degrees of each**, until the next pair would go past **6 degrees**. They're
+  listed in pitch order.
+- It opens once those answers hold **2 different pairs**; one pair alone would be
+  a two-way guess.
+- **Everything is open from the start and nothing passes or unlocks**: there's no
+  order to unlock along, and the list changes as the player does. So it has no
+  progress, only Notes (Speed and Melody both need passed degrees, §6), and its
+  answers never count toward the presets its pairs came from.
+
+Pooling the presets is deliberate here and nowhere else: the drone and the pad are
+the same everywhere, and Mix-ups keeps its own stats and confusions like any other
+preset, so every grade it shows was still earned in it (§9).
+
 ---
 
 ## 5. Stats, Grades & Weighting
@@ -222,8 +244,8 @@ is how they're told apart, so when the dealer weights a missed degree up, it
 weights the degree it was mistaken for up too — reading only the current
 preset's entries, like the stats: a 3 mistaken for ♭3 in Chromatic says nothing
 about Major, which has no ♭3. The log is still one list, newest last, so entries
-keep their order across presets for anything that reads them together. The
-Report surfaces the session's top pairs (§7.4).
+keep their order across presets for anything that reads them together — as
+Mix-ups does (§4). The Report surfaces the session's top pairs (§7.4).
 
 **Weighting.** Notes and Speed deal from the eligible degrees with subtle bias
 toward recent misses and their confusion partners, never excluding any degree.
@@ -375,6 +397,10 @@ for a phone in portrait, one-thumb reachable.
 - Tapping a card opens its session sheet in the tab's mode. A card whose mode is
   still locked in that preset is dimmed, says what opens it ("Pass all 7 in Notes
   · 4 / 7") and can't be tapped.
+- **Mix-ups** ends the Notes tab only, below the fixed presets. Its card names the
+  pairs its degrees come from ("3↔4 · ♭3↔3") over their grades, all open; it
+  shows what Start would build now, so it can change between sessions. Until it
+  opens it's dimmed like a locked card ("Mix up 2 different pairs · 1 / 2").
 - Home opens on the tab last used, saved the moment it changes.
 
 ### 7.2 Session sheet
@@ -436,7 +462,9 @@ octaves); the key cue on / off (§3.2, default on); daily goal minutes (default
 - **Reset** opens a preset fresh: its unlocks, passes, melody window, stats and
   confusions start over. Daily time stays — it belongs to every preset — and so
   do the preset's totals: they count practice that happened, not where the
-  preset stands. It asks first.
+  preset stands. It asks first. Mix-ups resets too, with nothing to relock: its
+  stats and its own confusions start over. Resetting another preset drops that
+  preset's confusions, so Mix-ups stops drawing on them.
 
 ---
 
@@ -458,7 +486,9 @@ Speed time window); the confusion log of (preset, played, tapped) entries; a
 per-preset progress record (unlocked count, passed degrees, melody outcome
 window); per preset and mode, the all-time totals; daily records (date, active
 minutes); settings and the session sheet's last choices, whose mode doubles as
-Home's open tab. Schema-versioned
+Home's open tab. Mix-ups keeps stats, confusions and totals under its own id like
+any preset, but no progress record, since it opens fresh every session; adding it
+needed no schema bump. Schema-versioned
 from the start. v2 made stats and confusions per preset; v1's shared ones can't be
 split after the fact, so the migration drops them, along with v1's separate pass
 windows, and keeps everything else. v3 added the totals; nothing before recorded
@@ -484,3 +514,7 @@ are left as they were.
    faster, but a degree graded A among Major's 7 hadn't earned it among
    Chromatic's 12. Stars and confusions split the same way, so every rating a
    preset shows was earned in it.
+5. **Mix-ups per preset, or across them?** — *Across.* Most confusions come from
+   whichever preset is being learned, and one drill of the worst pairs beats a
+   thin one per preset. It reads the other presets' confusions but keeps its own
+   stats and never feeds theirs, so the rule above still holds.

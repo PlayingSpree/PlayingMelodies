@@ -1,8 +1,9 @@
-// The practice core (DESIGN.md §3.2–§6): stats, confusions, unlocking, the
+// The practice core (DESIGN.md §3.2–§6): stats, confusions, Mix-ups, unlocking, the
 // dealer, melodies, grading, the session runner, daily and active time, and
 // settings. Pure TS.
 export * from './stats'
 export * from './confusions'
+export * from './mixups'
 export * from './progress'
 export * from './dealer'
 export * from './melody'

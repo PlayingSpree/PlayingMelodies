@@ -10,6 +10,15 @@ produced it.
 
 ---
 
+## 0.19.0 — 2026-10-10
+
+**A Mix-ups preset.** The Notes tab ends on Mix-ups, a preset built at Start from
+the newest 30 wrong answers in the other presets: their most frequent pairs, both
+degrees of each, up to 6 degrees, all open. It opens once those hold 2 different
+pairs, has no progress to pass or unlock, and keeps its own stats, confusions and
+totals, which it never reads back to build itself. Its card names the pairs. It
+resets in Settings like the others. No schema bump (§4, §5, §7.1, §7.5, §8, §9).
+
 ## 0.18.0 — 2026-10-09
 
 **A Daily session length.** Next to the fixed lengths, the session sheet offers

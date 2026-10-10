@@ -12,6 +12,7 @@ import {
   localDateKey,
   MAX_ALTERNATE_EVERY,
   MAX_GOAL_MINUTES,
+  MIXUPS_NAME,
   promptCue,
   RESOLVE_DIRECTIONS,
   TONIC_BASE_MIDI,
@@ -21,6 +22,7 @@ import {
   settingsStore,
   usePractice,
   useSettings,
+  type PracticeRecords,
 } from '../store'
 import {
   appStorage,
@@ -28,7 +30,14 @@ import {
   parseStateImport,
   type PersistedState,
 } from '../storage'
-import { PRESETS, REGISTER_OCTAVES, type Preset } from '../theory'
+import {
+  getPreset,
+  isBuiltInPresetId,
+  MIXUPS_ID,
+  PRESETS,
+  REGISTER_OCTAVES,
+  type PresetId,
+} from '../theory'
 import { FEEDBACK_SOUND_LABELS, RESOLVE_DIRECTION_LABELS } from './labels'
 import { Card, Chip, RaisedButton, SectionLabel } from './ui'
 
@@ -519,19 +528,25 @@ function Confirm({
 }
 
 function ResetSection() {
-  const [confirming, setConfirming] = useState<Preset['id'] | null>(null)
+  const [confirming, setConfirming] = useState<PresetId | null>(null)
+  const rows: { id: PresetId; name: string }[] = [
+    ...PRESETS,
+    { id: MIXUPS_ID, name: MIXUPS_NAME },
+  ]
   return (
     <Section label="Reset progress">
       <p className="text-sm text-ink-soft">
         A reset relocks a preset to its starting degrees and clears its grades,
-        stars and mix-ups. Daily time and streaks stay.
+        stars and mix-ups; Mix-ups has nothing to relock. Daily time and streaks
+        stay.
       </p>
-      {PRESETS.map((preset) => (
+      {rows.map(({ id, name }) => (
         <ResetRow
-          key={preset.id}
-          preset={preset}
-          confirming={confirming === preset.id}
-          onAsk={() => setConfirming(preset.id)}
+          key={id}
+          id={id}
+          name={name}
+          confirming={confirming === id}
+          onAsk={() => setConfirming(id)}
           onDone={() => setConfirming(null)}
         />
       ))}
@@ -539,25 +554,41 @@ function ResetSection() {
   )
 }
 
+// Where a preset stands, or null when a reset has nothing to clear.
+function resetStatus(records: PracticeRecords, id: PresetId): string | null {
+  if (!isBuiltInPresetId(id)) {
+    return records.presetStats[id] ? 'Grades and mix-ups' : null
+  }
+  const progress = records.presetProgress[id]
+  return progress
+    ? `${progress.unlockedCount} / ${getPreset(id).order.length} unlocked · ${progress.passed.length} passed`
+    : null
+}
+
 function ResetRow({
-  preset,
+  id,
+  name,
   confirming,
   onAsk,
   onDone,
 }: {
-  preset: Preset
+  id: PresetId
+  name: string
   confirming: boolean
   onAsk: () => void
   onDone: () => void
 }) {
-  const progress = usePractice((s) => s.records.presetProgress[preset.id])
+  const status = usePractice((s) => resetStatus(s.records, id))
   if (confirming) {
+    const what = isBuiltInPresetId(id)
+      ? 'Its unlocks, passes and stats'
+      : 'Its stats'
     return (
       <Confirm
-        message={`Reset ${preset.name}? Its unlocks, passes and stats start over.`}
+        message={`Reset ${name}? ${what} start over.`}
         action="Reset"
         onConfirm={() => {
-          practiceStore.getState().resetPreset(preset.id)
+          practiceStore.getState().resetPreset(id)
           onDone()
         }}
         onCancel={onDone}
@@ -567,17 +598,15 @@ function ResetRow({
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex flex-col">
-        <span className="font-extrabold">{preset.name}</span>
+        <span className="font-extrabold">{name}</span>
         <span className="text-sm text-ink-muted">
-          {progress
-            ? `${progress.unlockedCount} / ${preset.order.length} unlocked · ${progress.passed.length} passed`
-            : 'Not started'}
+          {status ?? 'Not started'}
         </span>
       </div>
       <RaisedButton
         size="sm"
         variant="outline"
-        disabled={!progress}
+        disabled={status === null}
         onClick={onAsk}
       >
         Reset

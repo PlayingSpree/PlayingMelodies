@@ -88,6 +88,11 @@ describe('sanitizePresetStatsMap', () => {
     expect(map.minor?.[3]).toEqual({ outcomes: [true], speedTimesMs: [] })
     expect(map.minor?.[0]).toEqual(EMPTY_DEGREE_STATS)
   })
+
+  it('keeps Mix-ups stats', () => {
+    const map = sanitizePresetStatsMap({ mixups: { 3: { outcomes: [true] } } })
+    expect(map.mixups?.[3]?.outcomes).toEqual([true])
+  })
 })
 
 describe('sanitizeConfusions', () => {
@@ -142,6 +147,12 @@ describe('sanitizePresetProgress', () => {
     expect(
       sanitizePresetProgressMap({ combined: { unlockedCount: 6 } }),
     ).toEqual({})
+  })
+
+  it('keeps no progress for Mix-ups, which opens fresh every session', () => {
+    expect(sanitizePresetProgressMap({ mixups: { unlockedCount: 3 } })).toEqual(
+      {},
+    )
   })
 
   it('keeps passes only for open degrees', () => {

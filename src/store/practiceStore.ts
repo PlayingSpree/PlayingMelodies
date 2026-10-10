@@ -18,6 +18,7 @@ import {
   feedbackSettings,
   freshProgress,
   goalMinutesLeft,
+  resolvePreset,
   isEmptyTotals,
   localDateKey,
   recordTotals,
@@ -43,7 +44,13 @@ import {
   type Settings,
 } from '../practice'
 import { appStorage, type AppStorage, type PersistedState } from '../storage'
-import { degreeAt, getPreset, type Degree, type PresetId } from '../theory'
+import {
+  degreeAt,
+  isBuiltInPresetId,
+  type BuiltInPresetId,
+  type Degree,
+  type PresetId,
+} from '../theory'
 import { settingsStore } from './settingsStore'
 
 export type PracticeRecords = Pick<
@@ -66,7 +73,8 @@ export interface PracticeStoreState {
   soundingSlot: CueSlot | null
 
   // Must be called synchronously from the Start tap's handler: starting the
-  // drone there is what unlocks audio on iOS (§2).
+  // drone there is what unlocks audio on iOS (§2). Mix-ups is built from the
+  // confusion log here and kept for the session; a no-op while it can't open.
   start(presetId: PresetId, options: SessionOptions): void
   chooseMode(mode: Mode): void
   tap(degree: Degree): void
@@ -205,7 +213,9 @@ export function createPracticeStore({
             ...next,
             presetStats: { ...next.presetStats, [presetId]: degreeStats },
             confusions,
-            presetProgress: { ...next.presetProgress, [presetId]: progress },
+            presetProgress: isBuiltInPresetId(presetId)
+              ? { ...next.presetProgress, [presetId]: progress }
+              : next.presetProgress,
           }
         }
         if (!isEmptyTotals(totals)) {
@@ -252,12 +262,17 @@ export function createPracticeStore({
       start(presetId, options) {
         clearTimers()
         sound.silence()
-        const preset = getPreset(presetId)
         const { records } = get()
+        const preset = resolvePreset(presetId, records.confusions)
+        if (preset === null) return
+        // Mix-ups keeps no progress: each session opens its degrees fresh.
+        const stored = isBuiltInPresetId(presetId)
+          ? records.presetProgress[presetId]
+          : undefined
         const practice: PracticeSlice = {
           degreeStats: statsOf(records.presetStats, presetId),
           confusions: records.confusions,
-          progress: records.presetProgress[presetId] ?? freshProgress(preset),
+          progress: stored ?? freshProgress(preset),
         }
         const { register, keyCue, goalMinutes } = settings()
         const todayKey = localDateKey(new Date(now()))
@@ -322,8 +337,12 @@ export function createPracticeStore({
 
       resetPreset(presetId) {
         storage.update((state) => {
-          const { [presetId]: _progress, ...presetProgress } =
-            state.presetProgress
+          // Mix-ups has no progress to drop; leaving out a key it lacks is a
+          // no-op.
+          const {
+            [presetId as BuiltInPresetId]: _progress,
+            ...presetProgress
+          } = state.presetProgress
           const { [presetId]: _stats, ...presetStats } = state.presetStats
           return {
             ...state,

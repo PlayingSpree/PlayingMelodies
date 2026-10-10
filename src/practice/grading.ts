@@ -3,7 +3,13 @@
 // Speed feeds only the star window; Melody feeds only the preset's melody
 // window. Every wrong note, in any mode, feeds the confusion log. Pure TS.
 
-import { degreeAt, type Degree, type Preset, type PresetId } from '../theory'
+import {
+  degreeAt,
+  MIXUPS_ID,
+  type Degree,
+  type Preset,
+  type PresetId,
+} from '../theory'
 import {
   recordConfusion,
   type Confusion,
@@ -115,12 +121,11 @@ export function gradeAnswer(
   }
 
   const recorded = recordNotesOutcome(stats, correct)
-  const unlock = recordNotesAnswer(
-    preset,
-    practice.progress,
-    played,
-    recorded.outcomes,
-  )
+  // Mix-ups opens everything at once and passes nothing (§4).
+  const unlock =
+    preset.id === MIXUPS_ID
+      ? { progress: practice.progress, newlyPassed: null, newlyUnlocked: [] }
+      : recordNotesAnswer(preset, practice.progress, played, recorded.outcomes)
   return {
     practice: {
       confusions,

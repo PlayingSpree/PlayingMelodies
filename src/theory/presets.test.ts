@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEGREES, degreeLabel } from './degrees'
-import { getPreset, isPresetId, PRESETS } from './presets'
+import { getPreset, isBuiltInPresetId, isPresetId, PRESETS } from './presets'
 
 function labels(id: 'major' | 'minor' | 'chromatic'): string {
   return getPreset(id).order.map(degreeLabel).join(' ')
@@ -37,10 +37,18 @@ describe('PRESETS', () => {
 })
 
 describe('isPresetId', () => {
-  it('accepts the built-in ids only', () => {
+  it('accepts the built-in ids and Mix-ups', () => {
     expect(isPresetId('major')).toBe(true)
     expect(isPresetId('chromatic')).toBe(true)
+    expect(isPresetId('mixups')).toBe(true)
     expect(isPresetId('dorian')).toBe(false)
     expect(isPresetId(1)).toBe(false)
+  })
+})
+
+describe('isBuiltInPresetId', () => {
+  it('leaves out Mix-ups', () => {
+    expect(isBuiltInPresetId('minor')).toBe(true)
+    expect(isBuiltInPresetId('mixups')).toBe(false)
   })
 })

@@ -9,6 +9,7 @@ import {
   goalMinutesLeft,
   localDateKey,
   MELODY_LENGTHS,
+  MIXUPS_NAME,
   PROMPT_COUNTS,
   SESSION_MINUTES,
   TEMPOS,
@@ -16,7 +17,7 @@ import {
   type SessionOptions,
 } from '../practice'
 import { practiceStore, usePractice, useSettings } from '../store'
-import { getPreset, type PresetId } from '../theory'
+import { getPreset, MIXUPS_ID, type PresetId } from '../theory'
 import { formatMinutes, MODE_LABELS, pitchName, TEMPO_LABELS } from './labels'
 import { Chip, RaisedButton, SectionLabel } from './ui'
 
@@ -38,7 +39,7 @@ export function SessionSheet({
   presetId: PresetId
   onClose: () => void
 }) {
-  const preset = getPreset(presetId)
+  const name = presetId === MIXUPS_ID ? MIXUPS_NAME : getPreset(presetId).name
   const dailyRecords = usePractice((s) => s.records.dailyRecords)
   const goal = useSettings((s) => s.settings.goalMinutes)
   const [todayKey] = useState(() => localDateKey(new Date()))
@@ -72,7 +73,7 @@ export function SessionSheet({
       />
       <div className="relative mx-auto flex max-h-[90dvh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-[24px] border-2 border-b-0 border-card-border bg-card px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <h2 className="text-2xl font-extrabold">
-          {preset.name}
+          {name}
           <span className="text-ink-muted"> · {MODE_LABELS[options.mode]}</span>
         </h2>
 
