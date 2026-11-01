@@ -175,6 +175,52 @@ describe('sanitizeDailyRecords', () => {
       }),
     ).toEqual({ '2026-10-04': { date: '2026-10-04', activeMinutes: 3 } })
   })
+
+  it('keeps day tallies for known presets and modes, held to their counts', () => {
+    const good = {
+      answered: 10,
+      correct: 8,
+      activeMs: 60_000,
+      rightTimeMs: 9600,
+      rightTimed: 8,
+      passed: 1,
+    }
+    expect(
+      sanitizeDailyRecords({
+        '2026-10-04': {
+          activeMinutes: 3,
+          tallies: {
+            major: {
+              notes: good,
+              speed: { answered: 2, correct: 5, rightTimed: 9, activeMs: -1 },
+              chords: good,
+            },
+            dorian: { notes: good },
+          },
+        },
+        '2026-10-05': { activeMinutes: 1, tallies: 'junk' },
+      }),
+    ).toEqual({
+      '2026-10-04': {
+        date: '2026-10-04',
+        activeMinutes: 3,
+        tallies: {
+          major: {
+            notes: good,
+            speed: {
+              answered: 2,
+              correct: 2,
+              activeMs: 0,
+              rightTimeMs: 0,
+              rightTimed: 2,
+              passed: 0,
+            },
+          },
+        },
+      },
+      '2026-10-05': { date: '2026-10-05', activeMinutes: 1 },
+    })
+  })
 })
 
 describe('sanitizeTotalsMap', () => {

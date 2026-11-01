@@ -20,6 +20,8 @@ import {
   SPEED_WINDOW,
   type DailyRecord,
   type DailyRecords,
+  type DayTallies,
+  type DayTally,
   type Mode,
   type DegreeStats,
   type DegreeStatsMap,
@@ -230,17 +232,60 @@ export function sanitizeTotalsMap(value: unknown): TotalsMap {
   return map
 }
 
+function asDuration(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : 0
+}
+
+// Each count on its own, held to what it counts within: right answers to the
+// answers, timed ones to the right ones.
+function sanitizeDayTally(value: unknown): DayTally {
+  const raw = asRecord(value)
+  const answered = asCount(raw.answered)
+  const correct = Math.min(asCount(raw.correct), answered)
+  const rightTimed = Math.min(asCount(raw.rightTimed), correct)
+  return {
+    answered,
+    correct,
+    activeMs: asDuration(raw.activeMs),
+    rightTimeMs: rightTimed === 0 ? 0 : asDuration(raw.rightTimeMs),
+    rightTimed,
+    passed: asCount(raw.passed),
+  }
+}
+
+// Days saved before spec 0.20.0 have none; they load as unpracticed.
+function sanitizeDayTallies(value: unknown): DayTallies | undefined {
+  const raw = asRecord(value)
+  const tallies: Partial<Record<PresetId, Partial<Record<Mode, DayTally>>>> = {}
+  for (const id of PRESET_IDS) {
+    if (!(id in raw)) continue
+    const modes = asRecord(raw[id])
+    const preset: Partial<Record<Mode, DayTally>> = {}
+    for (const mode of MODES) {
+      if (mode in modes) preset[mode] = sanitizeDayTally(modes[mode])
+    }
+    tallies[id] = preset
+  }
+  return Object.keys(tallies).length === 0 ? undefined : tallies
+}
+
 export function sanitizeDailyRecords(value: unknown): DailyRecords {
   const records: Record<string, DailyRecord> = {}
   for (const [key, entry] of Object.entries(asRecord(value))) {
-    const minutes = asRecord(entry).activeMinutes
+    const raw = asRecord(entry)
+    const minutes = raw.activeMinutes
     if (
       DATE_KEY_PATTERN.test(key) &&
       typeof minutes === 'number' &&
       Number.isFinite(minutes) &&
       minutes >= 0
     ) {
-      records[key] = { date: key, activeMinutes: minutes }
+      const tallies = sanitizeDayTallies(raw.tallies)
+      records[key] = tallies
+        ? { date: key, activeMinutes: minutes, tallies }
+        : { date: key, activeMinutes: minutes }
     }
   }
   return records

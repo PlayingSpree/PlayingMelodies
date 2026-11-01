@@ -4,7 +4,7 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.19.0** (2026-10-10). Revision history lives in
+Spec version: **0.20.0** (2026-11-01). Revision history lives in
 [CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
 sequencing is intentionally left outside this document.
 
@@ -37,7 +37,8 @@ sequencing is intentionally left outside this document.
   dealt again more often and the degrees a player confuses dealt *together*.
 - Grow from single notes to melodies, and from hearing a degree at all to hearing
   it fast.
-- Track a daily practice-time goal and streak.
+- Track a daily practice-time goal and streak, and show day by day whether the
+  ear is getting better.
 
 ### Non-goals
 
@@ -50,8 +51,8 @@ sequencing is intentionally left outside this document.
   the answer is played on a MIDI keyboard.
 - **No backend or accounts** in this version. Everything persists locally with JSON
   export/import; cross-device sync is a possible later addition.
-- No daily-practice pool and no detailed stats screen (yet) — with 12 degrees,
-  Home shows everything (§7.1).
+- No daily-practice pool and no per-degree stats screen (yet) — with 12 degrees,
+  Home shows every rating (§7.1), and the Report charts the last 30 days (§7.4).
 
 ---
 
@@ -259,6 +260,13 @@ them — a melody is one answer, right when clean — and land as each is graded
 session quit partway counts. A session counts with its first answer; one quit
 before it adds only its time. Totals rate nothing and never feed the dealer.
 
+**Day tallies.** Totals also land in the local day they happen: each daily record
+keeps, per preset and mode, the same answers, right answers and active time, plus
+the response times of the right answers (their sum and count, for a day's
+average) and, in Notes, how many degrees passed that day. The Report's last 30
+days are drawn from them (§7.4). Like the totals they count practice that
+happened — a reset leaves them — rate nothing and never feed the dealer.
+
 ---
 
 ## 6. Session Modes
@@ -434,10 +442,25 @@ presets and modes.
 ### 7.4 Report
 
 Accuracy; the preset's **all-time totals** in this mode, this session included
-(§5) — sessions, answers, percent right, time practiced; per-degree grades with
-deltas since the previous session; the **top 3 confusions**; anything newly passed
-or unlocked; average response time (Notes, Melody) or stars earned (Speed); the
-goal line.
+(§5) — sessions, answers, percent right, time practiced; the **last 30 days**
+below them; per-degree grades with deltas since the previous session; the **top 3
+confusions**; anything newly passed or unlocked; average response time (Notes,
+Melody) or stars earned (Speed); the goal line.
+
+- **Last 30 days** charts the same preset and mode from its day tallies (§5), in
+  the mode's own measure: percent right in Notes, percent clean in Melody, and in
+  Speed the average time of the right answers, where lower is better. It's left
+  out until a day in the window has something to plot.
+- A **headline** sets the last 7 days against the 7 before them, each pooled over
+  its answers ("This week 84% · last week 78%"); a week without answers reads "—".
+  This is the line that answers "am I improving?"
+- The **chart** has a column per day ending today and a dot on each day the preset
+  and mode were practiced. A day without practice is a gap, never a zero.
+- In Notes a **mark** under a day shows degrees passed that day: the harder degrees
+  a pass unlocks pull accuracy down for a while, and the dip shouldn't read as
+  slipping.
+- **Tapping a day** shows its line — date, answers, the measure, average time, time
+  practiced in it. The chart has a single axis; minutes live only in that line.
 
 ### 7.5 Settings
 
@@ -457,7 +480,7 @@ octaves); the key cue on / off (§3.2, default on); daily goal minutes (default
   silent here, since the drone only plays in a session.
 
 - **Export/import** covers everything stored — stats, progress, totals, daily
-  time and settings — since this device holds the only copy (§2). An import
+  time and tallies, and settings — since this device holds the only copy (§2). An import
   replaces all of it, so it asks first.
 - **Reset** opens a preset fresh: its unlocks, passes, melody window, stats and
   confusions start over. Daily time stays — it belongs to every preset — and so
@@ -485,7 +508,7 @@ rest.
 Speed time window); the confusion log of (preset, played, tapped) entries; a
 per-preset progress record (unlocked count, passed degrees, melody outcome
 window); per preset and mode, the all-time totals; daily records (date, active
-minutes); settings and the session sheet's last choices, whose mode doubles as
+minutes, and per preset and mode the day's tally); settings and the session sheet's last choices, whose mode doubles as
 Home's open tab. Mix-ups keeps stats, confusions and totals under its own id like
 any preset, but no progress record, since it opens fresh every session; adding it
 needed no schema bump. Schema-versioned
@@ -493,7 +516,8 @@ from the start. v2 made stats and confusions per preset; v1's shared ones can't 
 split after the fact, so the migration drops them, along with v1's separate pass
 windows, and keeps everything else. v3 added the totals; nothing before recorded
 which preset or mode time went to, so they start at zero, and the daily records
-are left as they were.
+are left as they were. Day tallies came later without a bump: a day saved before
+them loads with none, and the chart shows it as unpracticed.
 
 ---
 
@@ -518,3 +542,7 @@ are left as they were.
    whichever preset is being learned, and one drill of the worst pairs beats a
    thin one per preset. It reads the other presets' confusions but keeps its own
    stats and never feeds theirs, so the rule above still holds.
+6. **Chart grades, or accuracy?** — *Accuracy.* A preset grade has five steps and
+   rounds down, so day to day it's mostly a flat line; a day's percent moves with
+   the ear. Its one misleading case — the drop after a pass unlocks harder
+   degrees — is marked on the chart rather than hidden.

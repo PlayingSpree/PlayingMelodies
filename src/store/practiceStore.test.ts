@@ -466,6 +466,24 @@ describe('practiceStore', () => {
     expect(t.store.getState().records.totals).toEqual(t.storage.state.totals)
   })
 
+  it('adds each session to today’s tally for its preset and mode', () => {
+    const t = setup()
+    t.start()
+    vi.advanceTimersByTime(SETTLE_MS + 1000)
+    t.answerRight()
+    vi.advanceTimersByTime(RIGHT_FEEDBACK_MS + 2000)
+    t.answerWrong()
+    t.store.getState().close()
+
+    const today = t.storage.state.dailyRecords[localDateKey(new Date())]
+    const notes = today?.tallies?.major?.notes
+    expect(notes).toMatchObject({ answered: 2, correct: 1, rightTimed: 1 })
+    expect(notes?.activeMs).toBe(t.storage.state.totals.major?.notes?.activeMs)
+    expect(notes?.rightTimeMs).toBeGreaterThan(0)
+    // The minutes and the tally share the day's record.
+    expect(today?.activeMinutes).toBeCloseTo((notes?.activeMs ?? 0) / 60_000)
+  })
+
   it('a session quit before its first answer adds only its time', () => {
     const t = setup()
     t.start()

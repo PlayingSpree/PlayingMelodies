@@ -3,9 +3,13 @@
 // *derived* from the records against the current goal — nothing is stored,
 // so a changed goal can never disagree with a cached counter. Pure TS.
 
+import type { DayTallies } from './history'
+
 export interface DailyRecord {
   date: string // local 'YYYY-MM-DD', also the record's key
   activeMinutes: number
+  // Per preset and mode (§5). Absent on days saved before spec 0.20.0.
+  tallies?: DayTallies
 }
 
 export type DailyRecords = Readonly<Record<string, DailyRecord>>
@@ -39,7 +43,10 @@ export function addActiveMinutes(
   minutes: number,
 ): DailyRecords {
   const activeMinutes = (records[dateKey]?.activeMinutes ?? 0) + minutes
-  return { ...records, [dateKey]: { date: dateKey, activeMinutes } }
+  return {
+    ...records,
+    [dateKey]: { ...records[dateKey], date: dateKey, activeMinutes },
+  }
 }
 
 // What is left of today's goal, in minutes; zero once it's met.

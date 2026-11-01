@@ -6,7 +6,7 @@
 // slot) is sounding.
 // After every step it writes what changed through to storage: the records
 // when an answer was graded, new active time to today, and both to the
-// preset's all-time totals in this mode.
+// preset's all-time totals in this mode and to today's tally for it.
 
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
@@ -19,9 +19,12 @@ import {
   freshProgress,
   goalMinutesLeft,
   resolvePreset,
+  isEmptyDayTally,
   isEmptyTotals,
   localDateKey,
+  recordDayTally,
   recordTotals,
+  stepDayTally,
   stepTotals,
   statsOf,
   pause,
@@ -197,14 +200,16 @@ export function createPracticeStore({
 
     // Writes a step's changes through: the preset's records once an answer
     // is graded, active time earned since the last step to today, and both
-    // to the totals.
+    // to the totals and today's tally.
     function persist(before: SessionState, after: SessionState): void {
       const graded = after.practice !== before.practice
       const earnedMs = after.activity.activeMs - before.activity.activeMs
       const totals = stepTotals(before, after)
-      if (!graded && isEmptyTotals(totals)) return
+      const tally = stepDayTally(before, after)
+      if (!graded && isEmptyTotals(totals) && isEmptyDayTally(tally)) return
       const presetId = after.setup.preset.id
       const { mode } = after.setup.options
+      const todayKey = localDateKey(new Date(now()))
       storage.update((state) => {
         let next = state
         if (graded) {
@@ -224,12 +229,24 @@ export function createPracticeStore({
             totals: recordTotals(next.totals, presetId, mode, totals),
           }
         }
+        if (!isEmptyDayTally(tally)) {
+          next = {
+            ...next,
+            dailyRecords: recordDayTally(
+              next.dailyRecords,
+              todayKey,
+              presetId,
+              mode,
+              tally,
+            ),
+          }
+        }
         if (earnedMs > 0) {
           next = {
             ...next,
             dailyRecords: addActiveMinutes(
               next.dailyRecords,
-              localDateKey(new Date(now())),
+              todayKey,
               earnedMs / 60_000,
             ),
           }

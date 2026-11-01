@@ -1,5 +1,6 @@
 // The Report (DESIGN.md §7.4): accuracy; the preset's all-time totals in this
-// mode; the ratings this mode feeds, before and after; the top 3 confusions;
+// mode and its last 30 days; the ratings this mode feeds, before and after;
+// the top 3 confusions;
 // anything newly passed or unlocked; the average response time; and the goal
 // line.
 
@@ -17,6 +18,7 @@ import {
 import { practiceStore, usePractice, useSettings } from '../store'
 import { degreeLabel, type Degree } from '../theory'
 import { cx } from './cx'
+import { LastDays } from './LastDays'
 import {
   formatDuration,
   formatMinutes,
@@ -156,6 +158,13 @@ export function Report() {
       <Section label="All time">
         <AllTime totals={totals} />
       </Section>
+
+      <LastDays
+        records={dailyRecords}
+        preset={preset.id}
+        mode={options.mode}
+        todayKey={todayKey}
+      />
 
       {report.newlyPassed.length > 0 && (
         <Section label="Newly passed">

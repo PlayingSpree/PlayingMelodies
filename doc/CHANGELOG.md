@@ -10,6 +10,17 @@ produced it.
 
 ---
 
+## 0.20.0 — 2026-11-01
+
+**The last 30 days on the Report.** Each daily record now keeps a tally per
+preset and mode — answers, right answers, active time, right-answer response
+times and, in Notes, degrees passed — kept through resets like the totals. The
+Report charts the session's preset and mode over the last 30 days in its mode's
+measure (percent right, percent clean, or Speed's average right-answer time),
+headed by this week against last week. Days with passes are marked in Notes, and
+tapping a day shows its details. Older days load with no tally, so no schema
+bump (§1, §5, §7.4, §7.5, §8, §9).
+
 ## 0.19.0 — 2026-10-10
 
 **A Mix-ups preset.** The Notes tab ends on Mix-ups, a preset built at Start from
