@@ -1,13 +1,12 @@
 // The Stage (DESIGN.md §7.3): the session's progress, replay and quit on
-// top; in the middle what the session wants now — listening, an answer, the
-// Speed limit draining, Melody's slots — or the feedback on the last answer;
+// top; in the middle what the session wants now — listening, an answer,
+// Melody's slots — or the feedback on the last answer;
 // the pad at the bottom, in reach of the thumb. While the app is in the
 // background the session pauses, and a cover over all but the top bar waits
 // for Resume (§6).
 
 import { useEffect } from 'react'
 import {
-  SPEED_LIMIT_MS,
   unlockedDegrees,
   type CueSlot,
   type SessionAnswer,
@@ -118,7 +117,7 @@ function Status({
   session: SessionState
   soundingSlot: CueSlot | null
 }) {
-  const { phase, setup, answers } = session
+  const { phase, setup } = session
   const { mode } = setup.options
 
   // Under the paused cover.
@@ -163,21 +162,9 @@ function Status({
     )
   }
 
-  return (
-    <div className="flex w-full flex-col items-center gap-4">
-      <p className="text-xl font-bold text-ink-soft">Which degree?</p>
-      {mode === 'speed' && (
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-track">
-          <div
-            // Remounted per prompt, which restarts the drain.
-            key={answers.length}
-            className="h-full origin-left rounded-full bg-warn"
-            style={{ animation: `drain ${SPEED_LIMIT_MS}ms linear forwards` }}
-          />
-        </div>
-      )}
-    </div>
-  )
+  // No countdown in Speed: the limit still holds, but a draining bar pulled
+  // the eye off the pad (§7.3).
+  return <p className="text-xl font-bold text-ink-soft">Which degree?</p>
 }
 
 function PausedCover({ onResume }: { onResume: () => void }) {

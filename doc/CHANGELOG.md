@@ -10,6 +10,12 @@ produced it.
 
 ---
 
+## 0.21.0 — 2026-11-24
+
+**No countdown in Speed.** The bar that drained above the pad over the 5 s limit
+is gone: it drew the eye away from listening. The limit itself is unchanged — a
+prompt left unanswered for 5 s is still a miss (§6, §6.2, §7.3).
+
 ## 0.20.0 — 2026-11-01
 
 **The last 30 days on the Report.** Each daily record now keeps a tally per

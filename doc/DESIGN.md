@@ -4,7 +4,7 @@ A phone web app for ear training. A constant drone sounds the tonic; the app pla
 note — or a short melody — over it, and the player taps which scale degree they
 heard. Sister app to PlayingChord: same look, same session shape, no MIDI.
 
-Spec version: **0.20.0** (2026-11-01). Revision history lives in
+Spec version: **0.21.0** (2026-11-24). Revision history lives in
 [CHANGELOG.md](CHANGELOG.md); this document describes only what the app *is*. Build
 sequencing is intentionally left outside this document.
 
@@ -277,7 +277,7 @@ drone and ends in the Report (§7.4).
 
 **Pausing.** When the app goes to the background mid-session, the session pauses:
 the notes and the drone stop and nothing moves on — no feedback runs out, no Speed
-limit drains. On return the Stage waits under a **Paused** cover for a **Resume**
+limit runs down. On return the Stage waits under a **Paused** cover for a **Resume**
 tap; it can't resume by itself, since iOS restarts audio only from a gesture (§2).
 Resume brings the drone back and settles as at Start, then:
 
@@ -341,7 +341,8 @@ Opens per preset once **every** degree in it has passed, and deals all of them.
 Timing degrees not yet heard reliably would only train guessing.
 
 - Plays exactly as Notes, against a **fixed 5 s limit** per note. Running out of
-  time is a miss.
+  time is a miss. The limit isn't shown counting down (§7.3): stars ask for well
+  under it, so it only ends a prompt left hanging.
 - Each answer's time (or 5 s, for a miss) feeds the degree's star (§5).
 - Feedback on a miss is the same as in Notes; a timeout shows the ✗ with no
   tapped degree, and plays no tapped note.
@@ -431,8 +432,9 @@ presets and modes.
   7) on the bottom row, the flats/sharps (♭2 ♭3 ♯4 ♭6 ♭7) raised between them.
 - Degrees outside the preset are **blank**; degrees in it but not yet unlocked are
   **dimmed**. Nothing ever moves, so the thumb learns positions along with the ear.
-- Above the pad: replay, the session's progress, and — in Speed — the time limit
-  draining; in Melody, the answer slots and undo.
+- Above the pad: replay, the session's progress, and in Melody the answer slots
+  and undo. Speed shows **no countdown**: its limit still holds (§6.2), but a bar
+  draining above the pad pulled the eye away from the listening.
 - After an answer the pad keeps the tapped key marked right or wrong, and on a
   miss outlines the correct one; during feedback and the key cue the key whose
   note is sounding lights up (§3.2, §6.1), and in Melody its slot too (§6.3).
